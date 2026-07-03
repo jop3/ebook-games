@@ -1,0 +1,26 @@
+# Compiled PocketBook binaries (built via Docker SDK / GitHub Actions, not committed)
+*.app
+*.exe
+
+# Debug/run logs and adhoc test dumps produced while iterating locally
+*.out
+*.err
+compilelog.txt
+testrun*.txt
+audit_result.txt
+_exit.txt
+_g_exit.txt
+_g_stderr.txt
+_g_stdout.txt
+_stderr.txt
+_stdout.txt
+_test_out.txt
+
+# Editor/tooling
+.claude/
+*.bak
+*.bak2
+
+# OS
+.DS_Store
+Thumbs.db

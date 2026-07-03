@@ -1,0 +1,12 @@
+# Build output
+irad.app
+*.app
+
+# Go
+/vendor/
+*.test
+*.out
+
+# Editor/OS
+.DS_Store
+Thumbs.db

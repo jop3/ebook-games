@@ -1,0 +1,42 @@
+name: Build irad.app
+
+# Builds the PocketBook .app binary in the cloud using the PocketBook Go SDK
+# Docker image, so no local toolchain (Docker/WSL/cross-compiler) is needed.
+# After a run, download the "irad-app" artifact, unzip it, and copy irad.app
+# into the device's applications/ folder.
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: # lets you trigger a build manually from the Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build irad.app in the PocketBook Go SDK container
+        run: |
+          set -euxo pipefail
+          # The SDK image bundles the patched Go toolchain, libinkview and the
+          # arm-obreey clang cross-compiler. It expects the module mounted at
+          # /app and produces an ARM .app binary.
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/app" \
+            -w /app \
+            sunsung/pocketbook-go-sdk:latest \
+            build -o irad.app .
+
+      - name: Show result
+        run: |
+          ls -la irad.app
+          file irad.app || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: irad-app
+          path: irad.app
+          if-no-files-found: error
