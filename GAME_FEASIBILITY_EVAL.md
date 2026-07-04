@@ -14,7 +14,7 @@ grades a **new** shortlist and recommends what to build.
 | **Go** | ★★★★☆ (2P) | Medium (+High for AI) | ✅ **Build 2-player / 9×9**; ship a weak 9×9 AI, don't promise a strong one |
 | **Shong** | ★★★★★ | Low–Medium | ✅ **Build** — chess-like on a tiny 4×6 board; distinct shapes, and the small board makes a *strong* AI easy |
 | **Donuts** ("Insert") | ★★★★☆ | Medium | ✅ **Build** — genuinely novel 2-player abstract (direction-forcing + custodial capture + connect-5) |
-| **Desdemona** | ★★★☆☆ | Low | 🟡 **Maybe** — fork `othello`; low novelty. Confirm exact ruleset first |
+| **Desdemona** | ★★☆☆☆ | Low | ❌ **Skip as standalone** — its most-popular form is just renamed Reversi (= our Othello). Add an Othello *variant mode* instead |
 | **Shogi (full)** | ★★☆☆☆ | High | ❌ **Skip** — AI + kanji rendering + drops UI too costly; Hasami covers the itch |
 | **Gomoku** | — | — | ❌ **Already shipped** — `irad` includes it ("fem i rad / Gomoku") |
 | **Cyberbox** | ★★☆☆☆ | Medium | ❌ **Skip** — Sokoban family; e-ink guidance in this repo explicitly avoids it |
@@ -159,18 +159,23 @@ one game, not two.)*
 
 ---
 
-## 🟡 Maybe / needs clarification
+## ❌ Skip as a standalone — Desdemona
 
-### Desdemona — an Othello/Reversi variant
-"Desdemona" is a Reversi twist (the common versions let capture lines **wrap around edges or turn
-corners**, vs. straight-line-only Othello). It is an **Othello engine with a modified flip rule**.
+Researched the name to pick "the most popular ruleset": there **isn't a single famous distinctive
+one.** The most-implemented thing called Desdemona (the top result, `stig/Desdemona` for macOS) is
+just a **plain Reversi/Othello** game under a different name. The handful of BGG board games named
+"Desdemona" are obscure one-offs, each with different rules and none widely played.
 
-- **Effort:** low — fork `othello`, change the flip raycasting, reuse board/UI/AI (retune eval).
-- **Caveat:** **low novelty** — we already ship Othello; this is an incremental variant. Cheapest
-  option on the list, but adds a twist rather than a new genre. Could even live as a "variant
-  mode" inside `othello` instead of a standalone app.
-- **Action:** confirm the exact Desdemona ruleset you mean before building (wrap vs. corner-turn
-  vs. board shape) — the flip logic depends on it.
+- So building "Desdemona" as its own app would either **duplicate our existing `othello`** (if we
+  take the popular = plain-Reversi reading) or force us to arbitrarily pick an obscure variant.
+  Either way the payoff is poor.
+- **Better use of the same effort — an Othello *variant mode*** toggled on the `othello` menu, with
+  a genuinely different, well-known rule. Cleanest option: **"Anti-Othello" / Reversed** — identical
+  play but the player with the **fewest** pieces at the end wins (a one-line win-condition flip that
+  plays completely differently and is a recognised Reversi variant). This adds real variety for
+  near-zero cost and no new app, icon, or art.
+- **Verdict:** don't ship a separate Desdemona; add the Anti-Othello mode to `othello` if you want
+  the variety.
 
 ---
 
@@ -221,10 +226,12 @@ YINSH and Go carry AI risk and go later.
 4. **Sushi Go** — first card game; broadens the library's genre mix.
 5. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
 6. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
-7. *(cheap extra)* **Desdemona** as an `othello` variant — once its ruleset is pinned down.
+7. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
+   worthwhile substitute for a standalone Desdemona.
 
 Every build still follows the standard §0 setup + splash/rules screens + `play_test.go` from
 `SPEC_NEXT_GAMES.md` and the guide.
 
-**Only open question:** which exact **Desdemona** ruleset (edge-wrap vs. corner-turn vs. board
-shape)? The flip logic depends on it. Shong and Donuts are now identified and specced above.
+**No open questions remain** — all nine titles are identified and specced above. (Desdemona
+resolved to "renamed Reversi," so it's folded into `othello` as an optional mode rather than a new
+app.)
