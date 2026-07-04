@@ -69,7 +69,16 @@ func (a *app) drawGame(sz image.Point) {
 
 	a.drawHeader(W)
 	controlTop := a.drawControls(W, H)
-	a.drawTranscript(W, topMargin+headerH+8, controlTop-8)
+
+	// A per-room illustration band sits between the header and the transcript,
+	// when the current room has one and it can be seen (not in the dark).
+	transTop := topMargin + headerH + 8
+	if v := roomVignette(a.st.Loc); v != nil && !story.IsDark(a.st) {
+		band := image.Rect(sideMargin, transTop, W-sideMargin, transTop+vigBandHeight)
+		drawVignetteBand(band, v)
+		transTop = band.Max.Y + 8
+	}
+	a.drawTranscript(W, transTop, controlTop-8)
 
 	if a.sayOpen {
 		a.drawSayPopup(W, controlTop)

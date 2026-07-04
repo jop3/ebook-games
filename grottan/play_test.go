@@ -265,6 +265,33 @@ func TestPlayMap(t *testing.T) {
 	assertNoOverflow(t, h, "full map")
 }
 
+// TestPlayVignettes renders the illustrated rooms and confirms the band coexists
+// with a full control block without overflow, and that it vanishes in the dark.
+func TestPlayVignettes(t *testing.T) {
+	a, h := boot(t)
+	h.TapXY(500, 900)
+	h.TapRect(findBtn(t, a.menuBtns, "Nytt spel").Rect)
+
+	// The Hall of Mists — the richest vignette — carried lamp lit so it shows.
+	a.st = story.New()
+	a.st.Loc = story.LOC_MISTHALL
+	a.st.Carried[story.OBJ_LAMP] = true
+	a.st.ObjState[story.OBJ_LAMP] = story.LAMP_BRIGHT
+	a.log = nil
+	a.print(story.Describe(a.st))
+	h.Draw()
+	shot(t, h, "14_misthall")
+	assertNoOverflow(t, h, "misthall vignette")
+
+	// In the dark, the illustration must be suppressed (you can't see the room).
+	a.st.ObjState[story.OBJ_LAMP] = story.LAMP_DARK
+	h.Draw()
+	if !story.IsDark(a.st) {
+		t.Fatal("expected the hall to be dark with the lamp off")
+	}
+	assertNoOverflow(t, h, "dark misthall")
+}
+
 // TestPlayWorstCaseAndScroll builds a crowded room (many exits + many objects)
 // and a long transcript, then scrolls — the hardest layout to keep on-screen.
 func TestPlayWorstCaseAndScroll(t *testing.T) {
