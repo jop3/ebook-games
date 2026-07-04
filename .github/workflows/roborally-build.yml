@@ -1,29 +1,31 @@
-name: Build roborally.app (release only)
+name: Build roborally.app
 
 # Builds the PocketBook ARM .app in the cloud using the PocketBook Go SDK Docker
-# image — but ONLY on demand, never on routine pushes, so the SDK container
-# isn't spun up on every commit. It runs when you:
+# image. This is the heavier job (pulls the SDK container + cross-compiles), so
+# it runs on meaningful events rather than every feature-branch commit:
+#   • push to main/master                   (keeps a fresh .app artifact on main)
 #   • publish a GitHub Release              (Releases → Draft a new release → Publish)
 #   • push a version tag  v* / roborally-v* (git tag v1.0.0 && git push origin v1.0.0)
 #   • click "Run workflow" on the Actions tab (workflow_dispatch)
 #
-# When triggered by a published Release, the built roborally.app is also attached
-# to that release as a downloadable asset. Otherwise grab it from the run's
-# "roborally-app" artifact. Then copy roborally.app into the device's
-# applications/ folder (see POCKETBOOK_GAMEDEV_GUIDE.md §7–§8).
+# Every run uploads the binary as the "roborally-app" artifact; a published
+# Release also gets roborally.app attached as a downloadable asset. Then copy
+# roborally.app into the device's applications/ folder (POCKETBOOK_GAMEDEV_GUIDE §7–§8).
+# (Fast container-free tests run separately on every push — see roborally-ci.yml.)
 
 on:
-  release:
-    types: [published]
   push:
+    branches: [main, master]
     tags:
       - 'v*'
       - 'roborally-v*'
+  release:
+    types: [published]
   workflow_dispatch:
 
-# Only one release build at a time; a newer trigger cancels an in-flight one.
+# Only one build per ref at a time; a newer trigger cancels an in-flight one.
 concurrency:
-  group: roborally-release-${{ github.ref }}
+  group: roborally-build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
