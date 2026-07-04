@@ -38,6 +38,10 @@ spec assumes 1072×1448 portrait (effective drawable height **1340**), greyscale
 
 **Keep (the core loop that makes RR *Robo Rally*):**
 - Secret simultaneous programming: draw a hand, commit **5 cards** into 5 ordered **registers**.
+  **Every robot — human and AI alike — commits blind.** No one sees anyone else's cards until they
+  reveal, register by register. Collisions, pushes, and crashes are surprises to *everyone*,
+  including the AI that caused them. The AIs are **not allowed to peek** at each other's or the
+  human's committed program when planning (§6 makes this a hard, enforced invariant, not a promise).
 - Register-by-register activation in **priority order** (distance to the priority antenna).
 - Board elements: **conveyor belts (single + express), rotating gears, walls, wall lasers, pits,
   repair sites, checkpoints**.
@@ -273,14 +277,35 @@ port must *manufacture* that, or the AIs are either coldly optimal (unbeatable, 
 uniformly random (stupid, no tension). The design is two layers: a **competent planner** plus a
 **stress-driven fumble model** layered on top.
 
+### Layer 0 — Information firewall (the AIs are blind too — enforce it, don't just intend it)
+This is the load-bearing fairness rule: **an AI plans using only public information** — the board,
+every robot's **current** position/facing/damage/next-checkpoint, and its **own** hand — and **never**
+the *committed programs* of any other robot (nor its own future-round hands). Nobody knows anyone
+else's cards in advance, so nobody's plan may depend on them. Make this **structurally impossible to
+violate**, not a matter of discipline:
+- `PlanProgram` takes a **read-only public snapshot** (board + robots' current visible state + this
+  robot's hand), **not** the full `GameState`. The `Registers` and `Hands` of other robots are simply
+  **not in the argument** the planner can see. If it isn't passed in, it can't be cheated with.
+- When the planner **simulates a candidate program forward** to score it (§4 physics), it runs that
+  simulation **against the other robots held stationary at their current tiles** — i.e. it treats
+  them as fixed obstacles, exactly as a blind human must guess. It does **not** simulate their moves,
+  because it doesn't know them. Its expectations about collisions/pushes will therefore sometimes be
+  wrong — which is the point: the AI gets nudged, blocked, and shoved into pits by moves it never saw
+  coming, same as everyone else. That surprise is a *feature*, and it stacks with the §2 hand limit
+  and the fumble model (below) to keep AIs believably fallible.
+- A regression play-test (§8) **asserts independence**: the program `PlanProgram` returns is
+  **bit-identical** whether or not the other robots' `Registers`/`Hands` are populated in the game
+  state — proof the planner draws on zero hidden information.
+
 ### Layer 1 — Planner (competence)
 Simulation-greedy, one round deep (board elements make deeper lookahead noisy and it's the honest
 human horizon anyway):
 1. From the robot's **actual drawn hand** (already a real constraint — you often can't do the ideal
    move), enumerate candidate 5-card programs. The hand caps the branching; prune with a beam
    (keep top-M partial programs by heuristic) so it stays snappy on the device CPU.
-2. For each candidate, **run the real deterministic resolver forward** (§4, including belts/gears/
-   lasers/pushes) and **score the resulting position**:
+2. For each candidate, **run the deterministic resolver forward with opponents held stationary**
+   (Layer 0 — belts/gears/lasers/pushes against the *current* board, not opponents' hidden moves) and
+   **score the resulting position**:
    - `− distance(pos → NextCheck)` after the round (dominant term; use BFS distance over the board,
      not Manhattan, so it respects walls),
    - big penalty for ending **dead** (pit/edge) or facing a wall/pit it will next step into,
@@ -377,6 +402,11 @@ itself (guide §6b):
 - **AI:** Expert clears a fixed solvable course within budget over N seeds; Nybörjare dies/fumbles
   strictly more often; **no illegal/incomplete program** from any profile/hand; fumble fires at the
   expected stress threshold under a fixed seed.
+- **AI blindness (anti-cheat, load-bearing):** assert `PlanProgram`'s output is **bit-identical**
+  with the other robots' `Registers`/`Hands` populated vs. cleared — the planner must draw on **zero
+  hidden information** about opponents' committed cards. Also assert the planner scores candidates
+  with **opponents held stationary** (feed it a state where an opponent *would* move into it next
+  register and confirm the plan is unchanged — the AI can't have foreseen it).
 - **Flow/guards:** quit via **Back** and **Meny** from Program and Resolve; restart/replay; no input
   accepted after `Winner` is set; taps off the board/hand ignored.
 
