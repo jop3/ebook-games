@@ -1,0 +1,65 @@
+name: Publish release
+
+# On-demand release cutter. Trigger it from the Actions tab (or via the API):
+# "Run workflow" → enter a version like v0.1.0. It creates the GitHub Release
+# (tag + notes) on the current commit, then builds every game's PocketBook ARM
+# .app and attaches each one to the release as a downloadable asset.
+#
+# Uses the runner's gh CLI authenticated with the built-in GITHUB_TOKEN, so it
+# needs no external secrets — just contents:write. Container-free tests still run
+# on every push (ci.yml); this is only invoked when you actually want to ship.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to create (e.g. v0.1.0)"
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ github.event.inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create the release (tag + notes) if it doesn't exist
+        run: |
+          set -euxo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "release $VERSION already exists — will (re)upload assets"
+          else
+            gh release create "$VERSION" \
+              --target "$GITHUB_SHA" \
+              --title "ebook-games $VERSION" \
+              --notes "Tagged build of the ebook-games library. Each game's PocketBook ARM .app is attached below — copy it into the device's applications/ folder (see POCKETBOOK_GAMEDEV_GUIDE.md §7-§8)."
+          fi
+
+      - name: Build every game's .app and attach it to the release
+        run: |
+          set -euxo pipefail
+          mods=$(find . -mindepth 2 -maxdepth 2 -name go.mod -not -path './playtest/*' \
+            -printf '%h\n' | sed 's|^\./||' | sort)
+          echo "Modules to build:"; echo "$mods"
+          for m in $mods; do
+            echo "== building $m =="
+            docker run --rm \
+              -v "${GITHUB_WORKSPACE}/$m:/app" -w /app \
+              sunsung/pocketbook-go-sdk:latest \
+              build -o "$m.app" .
+            file "$m/$m.app"
+            file "$m/$m.app" | grep -q ARM || { echo "::error::$m.app is not an ARM binary"; exit 1; }
+            gh release upload "$VERSION" "$m/$m.app" --clobber
+          done
+          echo "Attached all .app binaries to release $VERSION"
