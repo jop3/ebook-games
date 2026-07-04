@@ -1,0 +1,42 @@
+name: CI (all games)
+
+# Fast, container-free checks on every push and PR, across the whole repo:
+#   • the pure logic unit tests of every game that has a game/ package
+#   • the headless play-test suite for every game with a play_test.go
+#     (boots each real app and plays full games through the touch UI)
+# No Docker, no device — runs in a couple of minutes, so it's cheap to run on
+# everything now that the repo is public. The heavier ARM .app build lives in
+# build.yml and only runs on main / releases / tags.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Unit tests (every game's pure logic package)
+        run: |
+          set -euxo pipefail
+          for g in $(find . -mindepth 2 -maxdepth 2 -type d -name game | sort); do
+            m="${g%/game}"
+            echo "== $m =="
+            (cd "$m" && go vet ./game/ && go test ./game/)
+          done
+
+      - name: Play-test suite (all games, headless full games through the UI)
+        run: bash playtest/play.sh all
