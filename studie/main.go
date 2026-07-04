@@ -25,7 +25,9 @@ const (
 	screenMenu
 	screenGame
 	screenRules
-	screenNotebook // the detective's pad — clues + deductions (spec §10b)
+	screenNotebook   // the detective's pad — clues + deductions (spec §10b)
+	screenAccuse     // the accusation: culprit / method / motive (spec §10d)
+	screenResolution // the closing scene, on a solved case
 )
 
 type app struct {
@@ -47,6 +49,13 @@ type app struct {
 	selClue int
 	nbMsg   string
 
+	// accusation state.
+	accCulprit string
+	accMethod  string
+	accMotive  string
+	accResult  string
+	resolution string
+
 	exitBtns   []button
 	nounBtns   []button
 	verbBtns   []button
@@ -59,6 +68,14 @@ type app struct {
 	scrollDown image.Rectangle
 	rulesBack  image.Rectangle
 	bookBack   image.Rectangle
+
+	accuseBtn      image.Rectangle // "Anklaga…" on the notebook
+	accSubmit      image.Rectangle
+	accBack        image.Rectangle
+	accCulpritBtns []button
+	accMethodBtns  []button
+	accMotiveBtns  []button
+	resolutionBack image.Rectangle
 
 	downY     int
 	downValid bool
@@ -125,6 +142,12 @@ func (a *app) Draw() {
 	case screenNotebook:
 		a.bookBack = a.drawNotebook(sz)
 		ink.FullUpdate()
+	case screenAccuse:
+		a.accBack = a.drawAccuse(sz)
+		ink.FullUpdate()
+	case screenResolution:
+		a.resolutionBack = a.drawResolution(sz)
+		ink.FullUpdate()
 	}
 }
 
@@ -169,7 +192,11 @@ func (a *app) pointerUp(p image.Point) bool {
 func (a *app) Key(e ink.KeyEvent) bool {
 	if e.State == ink.KeyStateUp && e.Key == ink.KeyBack {
 		switch a.screen {
-		case screenNotebook:
+		case screenAccuse:
+			a.screen = screenNotebook
+			ink.Repaint()
+			return true
+		case screenNotebook, screenResolution:
 			a.screen = screenGame
 			ink.Repaint()
 			return true
@@ -209,6 +236,14 @@ func (a *app) handleTap(p image.Point) bool {
 		}
 	case screenNotebook:
 		return a.tapNotebook(p)
+	case screenAccuse:
+		return a.tapAccuse(p)
+	case screenResolution:
+		if p.In(a.resolutionBack) {
+			a.screen = screenMenu
+			ink.Repaint()
+			return true
+		}
 	}
 	return false
 }
@@ -241,6 +276,8 @@ func (a *app) enterGame(fresh bool) {
 	a.scroll = 0
 	a.stickTail = true
 	if fresh {
+		a.accCulprit, a.accMethod, a.accMotive = "", "", ""
+		a.accResult, a.resolution, a.nbMsg = "", "", ""
 		a.log = nil
 		a.print(story.Describe(a.st))
 		a.autosave()
@@ -353,10 +390,16 @@ func (a *app) doMove(m story.Motion) {
 	ink.Repaint()
 }
 
-// tapNotebook handles clue selection and combining on the notebook screen.
+// tapNotebook handles clue selection/combining and opening the accusation.
 func (a *app) tapNotebook(p image.Point) bool {
 	if p.In(a.bookBack) {
 		a.screen = screenGame
+		ink.Repaint()
+		return true
+	}
+	if p.In(a.accuseBtn) {
+		a.accResult = ""
+		a.screen = screenAccuse
 		ink.Repaint()
 		return true
 	}
@@ -381,6 +424,57 @@ func (a *app) tapNotebook(p image.Point) bool {
 			ink.Repaint()
 			return true
 		}
+	}
+	return false
+}
+
+// tapAccuse handles the culprit/method/motive pickers and the charge.
+func (a *app) tapAccuse(p image.Point) bool {
+	if p.In(a.accBack) {
+		a.screen = screenNotebook
+		ink.Repaint()
+		return true
+	}
+	for _, b := range a.accCulpritBtns {
+		if b.hit(p) {
+			a.accCulprit = b.Label
+			a.accResult = ""
+			ink.Repaint()
+			return true
+		}
+	}
+	for _, b := range a.accMethodBtns {
+		if b.hit(p) {
+			a.accMethod = b.Label
+			a.accResult = ""
+			ink.Repaint()
+			return true
+		}
+	}
+	for _, b := range a.accMotiveBtns {
+		if b.hit(p) {
+			a.accMotive = b.Label
+			a.accResult = ""
+			ink.Repaint()
+			return true
+		}
+	}
+	if p.In(a.accSubmit) {
+		if a.accCulprit == "" || a.accMethod == "" || a.accMotive == "" {
+			a.accResult = "Välj en skyldig, en metod och ett motiv innan du anklagar."
+			ink.Repaint()
+			return true
+		}
+		v := story.Accuse(a.st, a.accCulprit, a.accMethod, a.accMotive)
+		a.autosave()
+		if v.Win {
+			a.resolution = v.Text
+			a.screen = screenResolution
+		} else {
+			a.accResult = v.Text
+		}
+		ink.Repaint()
+		return true
 	}
 	return false
 }

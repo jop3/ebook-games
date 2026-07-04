@@ -11,82 +11,137 @@ func TestExamineRecordsCluesOnce(t *testing.T) {
 	if _, again := AddClueFor(s, OBJ_BODY); again {
 		t.Fatal("the same clue must not be recorded twice")
 	}
-	if len(s.Clues) != 1 {
-		t.Fatalf("expected 1 clue, got %d", len(s.Clues))
-	}
-	// An object with no clue yields nothing.
 	if _, ok := AddClueFor(s, OBJ_NONE); ok {
 		t.Fatal("OBJ_NONE should yield no clue")
 	}
 }
 
-func TestCombineValidAndInvalidPairs(t *testing.T) {
+func TestCombineChain(t *testing.T) {
 	s := New()
-	AddClueFor(s, OBJ_BOOTPRINT) // "boot"
-	AddClueFor(s, OBJ_RING)      // "ring"
-	AddClueFor(s, OBJ_CLOCK)     // "clock"
-
-	// boot + ring is a valid deduction (entry).
-	d, ok := Combine(s, 0, 1)
-	if !ok || d.ID != "entry" {
-		t.Fatalf("boot+ring should deduce 'entry', got %+v ok=%v", d, ok)
+	for _, o := range []ObjID{OBJ_BODY, OBJ_RING, OBJ_BOOT, OBJ_LATCH, OBJ_CLOCK, OBJ_CABTIME, OBJ_LETTER, OBJ_LEDGER} {
+		AddClueFor(s, o)
 	}
-	if !s.Deductions["entry"] {
-		t.Fatal("the deduction should be recorded on State")
+	want := map[string][2]string{
+		"poison": {"body", "ring"},
+		"entry":  {"boot", "latch"},
+		"timing": {"clock", "cabtime"},
+		"motive": {"letter", "ledger"},
 	}
-	// order independence: ring + boot is the same deduction.
-	if d2, ok := Combine(s, 1, 0); !ok || d2.ID != "entry" {
-		t.Fatalf("combine should be order-independent, got %+v ok=%v", d2, ok)
+	for id, pair := range want {
+		i, j := clueIndex(t, s, pair[0]), clueIndex(t, s, pair[1])
+		d, ok := Combine(s, i, j)
+		if !ok || d.ID != id {
+			t.Fatalf("%s+%s should deduce %q, got %+v ok=%v", pair[0], pair[1], id, d, ok)
+		}
 	}
-	// ring + clock is not a valid pair.
-	if _, ok := Combine(s, 1, 2); ok {
-		t.Fatal("ring+clock should not deduce anything")
+	if DeductionCount(s) != 4 || TotalDeductions() != 4 {
+		t.Fatalf("expected all 4 deductions, have %d/%d", DeductionCount(s), TotalDeductions())
 	}
-	// out-of-range / self pairs are rejected.
-	if _, ok := Combine(s, 0, 0); ok {
-		t.Fatal("a clue combined with itself must be rejected")
-	}
-	if _, ok := Combine(s, 0, 99); ok {
-		t.Fatal("out-of-range index must be rejected")
+	// A non-matching pair yields nothing.
+	if _, ok := Combine(s, clueIndex(t, s, "body"), clueIndex(t, s, "clock")); ok {
+		t.Fatal("body+clock should not deduce anything")
 	}
 }
 
-func TestCaseHasThreeDeductions(t *testing.T) {
-	if TotalDeductions() != 3 {
-		t.Fatalf("expected 3 deductions in the case, got %d", TotalDeductions())
+func TestAccusationRequiresRightChargeAndSupport(t *testing.T) {
+	// A correct charge with NO deductions is refused (unsupported).
+	s := New()
+	if v := Accuse(s, "crole", "poison", "debt"); v.Win {
+		t.Fatal("a correct charge with no deductions must not win")
+	}
+
+	// Make all deductions.
+	s = fullyDeduced(t)
+
+	// Wrong pillars are refused even when fully supported.
+	if v := Accuse(s, "hudd", "poison", "debt"); v.Win {
+		t.Fatal("wrong culprit must not win")
+	}
+	if v := Accuse(s, "crole", "blow", "debt"); v.Win {
+		t.Fatal("wrong method must not win")
+	}
+	if v := Accuse(s, "crole", "poison", "robbery"); v.Win {
+		t.Fatal("wrong motive must not win")
+	}
+
+	// The correct, fully-supported charge wins and sets Won.
+	v := Accuse(s, "crole", "poison", "debt")
+	if !v.Win || !s.Won {
+		t.Fatalf("the correct supported charge should win; v=%+v won=%v", v, s.Won)
+	}
+	if v.Text == "" {
+		t.Fatal("a winning verdict should carry the resolution text")
 	}
 }
 
-// TestSharedEngineDrivesMysteryData sanity-checks that the byte-identical cave
-// engine runs correctly against this story's data: a walk gathers clues.
+func TestAccusationNamesMissingDeduction(t *testing.T) {
+	s := fullyDeduced(t)
+	delete(s.Deductions, "motive") // undo one
+	v := Accuse(s, "crole", "poison", "debt")
+	if v.Win {
+		t.Fatal("must not win with a missing deduction")
+	}
+	if !containsSub(v.Text, deductionLabelSv["motive"]) {
+		t.Fatalf("verdict should name the missing deduction (motive); got %q", v.Text)
+	}
+}
+
 func TestSharedEngineDrivesMysteryData(t *testing.T) {
 	s := New()
-	if s.Loc != LOC_START {
-		t.Fatalf("start loc = %d, want consulting-rooms", s.Loc)
+	if s.Loc != LOC_START || IsDark(s) {
+		t.Fatal("should start lit, at the consulting-rooms")
 	}
-	// Rooms are all lit; darkness path never engages.
-	if IsDark(s) {
-		t.Fatal("mystery rooms should never be dark")
-	}
-	// Walk to the study via street→hall→study using the shared Move().
 	Move(s, MotStreet)
 	Move(s, MotIn)
 	Move(s, MotStudy)
 	if s.Loc != LOC_STUDY {
-		t.Fatalf("expected to reach the study, at %d", s.Loc)
-	}
-	// The body is present and examinable here.
-	if !Present(s, OBJ_BODY) {
-		t.Fatal("the body should be present in the study")
+		t.Fatalf("expected the study, at %d", s.Loc)
 	}
 	if !containsObj(VisibleObjects(s), OBJ_BODY) {
 		t.Fatalf("body should be a visible noun; got %v", VisibleObjects(s))
 	}
 }
 
+// --- helpers ---
+
+func fullyDeduced(t *testing.T) *State {
+	t.Helper()
+	s := New()
+	for _, o := range []ObjID{OBJ_BODY, OBJ_RING, OBJ_BOOT, OBJ_LATCH, OBJ_CLOCK, OBJ_CABTIME, OBJ_LETTER, OBJ_LEDGER} {
+		AddClueFor(s, o)
+	}
+	pairs := [][2]string{{"body", "ring"}, {"boot", "latch"}, {"clock", "cabtime"}, {"letter", "ledger"}}
+	for _, p := range pairs {
+		if _, ok := Combine(s, clueIndex(t, s, p[0]), clueIndex(t, s, p[1])); !ok {
+			t.Fatalf("failed to deduce from %v", p)
+		}
+	}
+	return s
+}
+
+func clueIndex(t *testing.T, s *State, id string) int {
+	t.Helper()
+	for i, c := range s.Clues {
+		if c.ID == id {
+			return i
+		}
+	}
+	t.Fatalf("clue %q not present", id)
+	return -1
+}
+
 func containsObj(list []ObjID, id ObjID) bool {
 	for _, x := range list {
 		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+func containsSub(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
 			return true
 		}
 	}

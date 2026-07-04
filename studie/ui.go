@@ -280,6 +280,11 @@ func (a *app) drawTranscript(W, top, bottom int) {
 func exitLabels(s *story.State) []labelled {
 	var out []labelled
 	for _, e := range story.Exits(s) {
+		// A gated destination (e.g. the chemist) stays hidden until the
+		// deduction that reveals the lead has been made.
+		if req, gated := story.GatedExits[e.Dest]; gated && !s.Deductions[req] {
+			continue
+		}
 		out = append(out, labelled{text: e.Label, data: int(e.Motion)})
 	}
 	return out
@@ -344,99 +349,221 @@ func drawButton(r image.Rectangle, label string, armed bool, f *ink.Font) {
 // clueLabel is the short Swedish tag shown for a clue in the notebook list
 // (the full observation was printed to the transcript when it was examined).
 var clueLabel = map[string]string{
-	"body":   "Kroppen",
-	"ring":   "Glasringen på skrivbordet",
-	"clock":  "Klockan, ställd fel",
-	"letter": "Den brända brevlappen",
-	"boot":   "Fotavtrycket i kolet",
-	"ledger": "Apotekets liggare",
+	"body":     "Kroppen — inget sår, doft av mandel",
+	"ring":     "Glasringen på skrivbordet",
+	"clock":    "Klockan, ställd två timmar fel",
+	"letter":   "Den brända brevlappen: '…liggare'",
+	"boot":     "Fotavtrycket i kolet",
+	"latch":    "Fönsterhaspen, uppbruten utifrån",
+	"visitor":  "Fru Hudds vittnesmål",
+	"cabtime":  "Kuskens vittnesmål",
+	"ledger":   "Apotekets liggare",
+	"tincture": "Den mörka flaskan (mandel)",
 }
 
 // deductionLabel is the short tag for a completed deduction.
 var deductionLabel = map[string]string{
 	"entry":  "Hur mördaren kom in",
+	"poison": "Att det var gift",
 	"motive": "Motivet",
 	"timing": "Tiden för dådet",
 }
 
+// deductionOrder fixes the display order of secured deductions (maps iterate
+// randomly, which would make the list jitter between frames on e-ink).
+var deductionOrder = []string{"entry", "poison", "timing", "motive"}
+
+// nbRowH is the compact clue-row height (the list can hold up to ten clues).
+const nbRowH = 56
+
 // drawNotebook renders the detective's pad: the gathered clues (tap two to
-// combine), the last conclusion drawn, and the deductions secured so far.
+// combine), the last conclusion drawn, the deductions secured, and — at the
+// bottom — the "Anklaga…" and "Tillbaka" buttons. Returns the Tillbaka rect.
 func (a *app) drawNotebook(sz image.Point) image.Rectangle {
 	ink.ClearScreen()
 	W := sz.X
 
-	tf := ink.OpenFont(ink.DefaultFontBold, 56, true)
+	tf := ink.OpenFont(ink.DefaultFontBold, 52, true)
 	tf.SetActive(ink.Black)
-	ink.DrawString(image.Pt((W-ink.StringWidth("Anteckningsbok"))/2, 40), "Anteckningsbok")
+	ink.DrawString(image.Pt((W-ink.StringWidth("Anteckningsbok"))/2, 34), "Anteckningsbok")
 	tf.Close()
 
 	a.fonts.Body.SetActive(ink.DarkGray)
 	prog := "Slutsatser: " + itoa(story.DeductionCount(a.st)) + "/" + itoa(story.TotalDeductions()) +
 		"   ·   tryck på två ledtrådar för att dra en slutsats"
-	ink.DrawString(image.Pt((W-ink.StringWidth(prog))/2, 108), prog)
+	ink.DrawString(image.Pt((W-ink.StringWidth(prog))/2, 98), prog)
 
 	x0 := sideMargin
 	x1 := W - sideMargin
-	y := 170
+	y := 148
 
-	// Clue list.
+	// Clue list (compact rows).
 	a.fonts.Label.SetActive(ink.DarkGray)
 	ink.DrawString(image.Pt(x0, y), "LEDTRÅDAR")
-	y += labelH + 4
+	y += labelH
 	a.clueBtns = nil
 	if len(a.st.Clues) == 0 {
 		a.fonts.Body.SetActive(ink.LightGray)
-		ink.DrawString(image.Pt(x0, y), "(inga ännu — undersök platsen)")
-		y += bh
+		ink.DrawString(image.Pt(x0, y), "(inga ännu — undersök platsen och hör vittnena)")
+		y += nbRowH
 	}
 	for i, c := range a.st.Clues {
-		r := image.Rect(x0, y, x1, y+bh)
+		r := image.Rect(x0, y, x1, y+nbRowH-6)
 		selected := a.selClue == i
 		lbl := clueLabel[c.ID]
 		if lbl == "" {
 			lbl = c.Text
 		}
-		drawButton(r, itoa(i+1)+".  "+lbl, selected, a.fonts.Button)
+		drawButton(r, itoa(i+1)+".  "+lbl, selected, a.fonts.Label)
 		a.clueBtns = append(a.clueBtns, button{Rect: r, Label: lbl, Data: i})
-		y += bh + gap
+		y += nbRowH
 	}
 
-	// Last conclusion drawn (wrapped).
-	y += blockGap
-	if a.nbMsg != "" {
-		a.fonts.Label.SetActive(ink.DarkGray)
-		ink.DrawString(image.Pt(x0, y), "SLUTSATS")
-		y += labelH
-		a.fonts.Body.SetActive(ink.Black)
-		for _, ln := range wrapText(a.nbMsg, x1-x0) {
-			ink.DrawString(image.Pt(x0, y), ln)
-			y += lineH
-		}
-		y += blockGap
-	}
-
-	// Deductions secured.
+	// Secured deductions, one compact line.
 	if story.DeductionCount(a.st) > 0 {
+		y += 6
 		a.fonts.Label.SetActive(ink.DarkGray)
 		ink.DrawString(image.Pt(x0, y), "FASTSTÄLLT")
 		y += labelH
 		a.fonts.Body.SetActive(ink.Black)
-		for id := range a.st.Deductions {
-			lbl := deductionLabel[id]
-			if lbl == "" {
-				lbl = id
+		for _, id := range deductionOrder {
+			if a.st.Deductions[id] {
+				ink.DrawString(image.Pt(x0, y), "•  "+deductionLabel[id])
+				y += lineH - 4
 			}
-			ink.DrawString(image.Pt(x0, y), "•  "+lbl+"  (fastställt)")
+		}
+	}
+
+	// Last conclusion drawn (wrapped), above the buttons.
+	buttonsTop := usableH - bottomMargin - 100
+	if a.nbMsg != "" {
+		a.fonts.Label.SetActive(ink.DarkGray)
+		ink.DrawString(image.Pt(x0, y+6), "SLUTSATS")
+		y += labelH + 6
+		a.fonts.Body.SetActive(ink.Black)
+		for _, ln := range wrapText(a.nbMsg, x1-x0) {
+			if y+lineH > buttonsTop { // never draw under the buttons
+				break
+			}
+			ink.DrawString(image.Pt(x0, y), ln)
 			y += lineH
 		}
 	}
 
-	// Back button.
+	// Bottom: Anklaga… (left) and Tillbaka (right).
+	backH := 90
+	bottom := usableH - bottomMargin
+	gapB := 20
+	half := (x1 - x0 - gapB) / 2
+	acc := image.Rect(x0, bottom-backH, x0+half, bottom)
+	back := image.Rect(x1-half, bottom-backH, x1, bottom)
+	drawButton(acc, "Anklaga…", false, a.fonts.Button)
+	drawButton(back, "Tillbaka", false, a.fonts.Button)
+	a.accuseBtn = acc
+	return back
+}
+
+// --- accusation screen (spec §10d) ------------------------------------------
+
+// drawAccuse renders the three-part charge (culprit / method / motive), each a
+// list of selectable options, plus Anklaga (submit) and Tillbaka. A short
+// refusal (wrong pillar or unsupported charge) shows inline; a correct, fully
+// supported charge routes to the resolution screen instead. Returns the
+// Tillbaka rect.
+func (a *app) drawAccuse(sz image.Point) image.Rectangle {
+	ink.ClearScreen()
+	W := sz.X
+
+	tf := ink.OpenFont(ink.DefaultFontBold, 52, true)
+	tf.SetActive(ink.Black)
+	ink.DrawString(image.Pt((W-ink.StringWidth("Anklagelse"))/2, 30), "Anklagelse")
+	tf.Close()
+
+	a.fonts.Body.SetActive(ink.DarkGray)
+	sub := "Peka ut den skyldige, metoden och motivet."
+	ink.DrawString(image.Pt((W-ink.StringWidth(sub))/2, 92), sub)
+
+	x0 := sideMargin
+	x1 := W - sideMargin
+	y := 146
+
+	a.accCulpritBtns, y = a.drawChoiceGroup(x0, x1, y, "DEN SKYLDIGE", story.Culprits, a.accCulprit)
+	a.accMethodBtns, y = a.drawChoiceGroup(x0, x1, y, "METOD", story.Methods, a.accMethod)
+	a.accMotiveBtns, y = a.drawChoiceGroup(x0, x1, y, "MOTIV", story.Motives, a.accMotive)
+
+	// Inline refusal message (short), if any.
+	buttonsTop := usableH - bottomMargin - 90
+	if a.accResult != "" {
+		a.fonts.Body.SetActive(ink.Black)
+		yy := y + 4
+		for _, ln := range wrapText(a.accResult, x1-x0) {
+			if yy+lineH > buttonsTop {
+				break
+			}
+			ink.DrawString(image.Pt(x0, yy), ln)
+			yy += lineH
+		}
+	}
+
+	// Bottom buttons.
+	backH := 90
+	bottom := usableH - bottomMargin
+	gapB := 20
+	half := (x1 - x0 - gapB) / 2
+	ready := a.accCulprit != "" && a.accMethod != "" && a.accMotive != ""
+	sub2 := image.Rect(x0, bottom-backH, x0+half, bottom)
+	back := image.Rect(x1-half, bottom-backH, x1, bottom)
+	drawButton(sub2, "Anklaga", false, a.fonts.Button)
+	if !ready {
+		ink.DrawRect(sub2, ink.LightGray) // hint: not yet complete
+	}
+	drawButton(back, "Tillbaka", false, a.fonts.Button)
+	a.accSubmit = sub2
+	return back
+}
+
+// drawChoiceGroup draws a titled column of single-select option buttons and
+// returns the buttons plus the y below the group.
+func (a *app) drawChoiceGroup(x0, x1, top int, title string, choices []story.Choice, sel string) ([]button, int) {
+	a.fonts.Label.SetActive(ink.DarkGray)
+	ink.DrawString(image.Pt(x0, top), title)
+	y := top + labelH
+	rowH := 60
+	var out []button
+	for _, c := range choices {
+		r := image.Rect(x0, y, x1, y+rowH-8)
+		drawButton(r, c.Label, sel == c.ID, a.fonts.Button)
+		out = append(out, button{Rect: r, Label: c.ID})
+		y += rowH
+	}
+	return out, y + 8
+}
+
+// drawResolution shows the closing scene on a solved case.
+func (a *app) drawResolution(sz image.Point) image.Rectangle {
+	ink.ClearScreen()
+	W := sz.X
+
+	tf := ink.OpenFont(ink.DefaultFontBold, 60, true)
+	tf.SetActive(ink.Black)
+	ink.DrawString(image.Pt((W-ink.StringWidth("Fallet löst"))/2, 60), "Fallet löst")
+	tf.Close()
+
+	body := ink.OpenFont(ink.DefaultFont, 34, true)
+	body.SetActive(ink.Black)
+	margin := 54
+	y := 180
+	for _, ln := range wrapText(a.resolution, W-2*margin) {
+		ink.DrawString(image.Pt(margin, y), ln)
+		y += 48
+	}
+	body.Close()
+
 	backH := 100
 	bw := W / 2
 	bottom := usableH - bottomMargin
 	r := image.Rect((W-bw)/2, bottom-backH, (W+bw)/2, bottom)
-	drawButton(r, "Tillbaka", false, a.fonts.Button)
+	drawButton(r, "Till menyn", false, a.fonts.Button)
 	return r
 }
 
