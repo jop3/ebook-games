@@ -12,9 +12,9 @@ grades a **new** shortlist and recommends what to build.
 | **Hasami shogi** | ★★★★★ | Low–Medium | ✅ **Build** — cheap (fork `othello`), distinct sandwich-capture mechanic |
 | **Sushi Go** | ★★★★☆ | Medium | ✅ **Build** — the library's first *card/drafting* game; good genre gap-fill |
 | **Go** | ★★★★☆ (2P) | Medium (+High for AI) | ✅ **Build 2-player / 9×9**; ship a weak 9×9 AI, don't promise a strong one |
+| **Shong** | ★★★★★ | Low–Medium | ✅ **Build** — chess-like on a tiny 4×6 board; distinct shapes, and the small board makes a *strong* AI easy |
+| **Donuts** ("Insert") | ★★★★☆ | Medium | ✅ **Build** — genuinely novel 2-player abstract (direction-forcing + custodial capture + connect-5) |
 | **Desdemona** | ★★★☆☆ | Low | 🟡 **Maybe** — fork `othello`; low novelty. Confirm exact ruleset first |
-| **Shong** | ？ | Medium | 🟡 **Clarify** — best guess = mahjong/Shisen tile-match (feasible); identity unconfirmed |
-| **Insert / donuts** | ？ | ？ | 🟡 **Clarify** — best guess = match-3/merge (poor e-ink fit); identity unconfirmed |
 | **Shogi (full)** | ★★☆☆☆ | High | ❌ **Skip** — AI + kanji rendering + drops UI too costly; Hasami covers the itch |
 | **Gomoku** | — | — | ❌ **Already shipped** — `irad` includes it ("fem i rad / Gomoku") |
 | **Cyberbox** | ★★☆☆☆ | Medium | ❌ **Skip** — Sokoban family; e-ink guidance in this repo explicitly avoids it |
@@ -113,6 +113,52 @@ players.
 
 ---
 
+### Shong — chess-like duel on a tiny board  *(identity now confirmed)*
+Free abstract by Higher Plain Games. **4-wide × 6-tall** board; four piece types — Triangle
+(diagonal), Square (orthogonal), X (omnidirectional), King (one step, alternating tri/square).
+Non-king pieces start with a 1-square "short move" and flip to a 2-square "long move" after their
+first move (an eye symbol marks the state). No jumping; clear line of sight required. **Win by
+capturing the enemy King *or* walking your King to the far edge.**
+
+- **Logic:** simple and pure-Go. The only wrinkle is the per-piece short/long toggle — one bool of
+  state per piece. Easy to unit-test.
+- **AI:** *this is the standout.* The board is only 24 cells, so alpha-beta minimax searches deep
+  cheaply — you can ship a genuinely **strong** AI (the three-difficulty ladder the original has),
+  unlike YINSH/Go where AI is the risk. Fork `othello`'s AI scaffolding.
+- **Input:** tap piece → tap destination; a small mark shows each piece's short/long state. Ideal
+  tap fit.
+- **Render:** the four types map to **Triangle / Square / X / King** — the library *already draws*
+  △ □ X as player marks in `irad`, so these glyphs are proven on-device. The original's color
+  shifts are cosmetic balance feedback → **drop them**, they carry no rules.
+- **Reuse:** `othello` (turn loop + AI), `irad` (△□X glyphs).
+- **Verdict:** upgraded from "clarify" to a **strong Build** now that it's identified. Small board
+  + distinct shapes + easy strong AI = low-risk, high-polish. **Low–Medium effort.**
+
+### Donuts — direction-forcing abstract with custodial capture  *("Insert" = its capture rule)*
+Funforge, 2021 (BGG 341358). Four 3×3 tiles shuffled into a **6×6** grid; every cell carries a
+line (vertical / horizontal / diagonal). Place a ring; **the line in that cell dictates the
+direction your opponent must play next** (if that line is full, they play anywhere). **Custodial
+capture:** *inserting* a ring so it flanks opponent rings (`O_O`, and the gapped `OXX_O` form)
+flips them to your color. **Win** instantly on 5-in-a-row (any direction); otherwise the largest
+orthogonally-connected group wins. *("Insert" in the shortlist was describing this capture — it's
+one game, not two.)*
+
+- **Logic:** moderate, pure-Go. The direction-constraint lookup, the custodial flip (an Othello
+  cousin, plus the gapped `OXX_O` variant), connect-5 detection, and the largest-group tiebreak
+  are each an independent, unit-testable function.
+- **AI:** 6×6 with place-and-flip → moderate branching; alpha-beta at a decent depth is
+  comfortable. Achievable, reusing `othello`'s search.
+- **Input/Render:** tap an empty cell to place. Two piece states → filled disc vs. outline ring
+  (greyscale-clean). Cell lines render as simple `│ ─ ╱ ╲` line-art. Static board, no animation.
+- **Reuse:** `othello` (flip + AI + board); the direction-forcing rule is the novel part.
+- **Novelty:** high — nothing in the library forces the opponent's move direction like this.
+- **Note:** it's a *commercial* game — rules aren't copyrightable, but ship original art and pick
+  a neutral/Swedish name (the library renames anyway, e.g. "Einsteins Gåta"), as with any port.
+- **Verdict:** **Build.** Distinct mechanic, clean e-ink/tap fit, good `othello` reuse.
+  **Medium effort.**
+
+---
+
 ## 🟡 Maybe / needs clarification
 
 ### Desdemona — an Othello/Reversi variant
@@ -125,26 +171,6 @@ corners**, vs. straight-line-only Othello). It is an **Othello engine with a mod
   mode" inside `othello` instead of a standalone app.
 - **Action:** confirm the exact Desdemona ruleset you mean before building (wrap vs. corner-turn
   vs. board shape) — the flip logic depends on it.
-
-### Shong — identity unconfirmed
-Not resolvable to one authoritative game. **Best guess: a mahjong-solitaire / Shisen-Sho
-tile-matching game.** Under that reading:
-
-- **Fit:** static layout, tap-two-tiles-to-match → good e-ink/tap fit; no AI (solitaire).
-- **Cost:** the burden is **distinct greyscale tile faces** (mahjong has ~34–42 designs) legible
-  at cell size, plus a **solvable-deal generator** (guarantee winnable). Medium effort. Shisen-Sho
-  (flat path-connect matching) is geometrically simpler than layered "turtle" mahjong — prefer it
-  if this is the target.
-- **Action:** tell me which "Shong" you mean and I'll firm up the estimate.
-
-### Insert / donuts — identity unconfirmed
-Searches map "donuts" to generic **match-3 / merge / connect-3** mobile games, and "Insert" is
-unclear (possibly a Connect-Four-style column-insert game).
-
-- If **match-3/merge**: poor fit — same animation/color problems as Bejeweled below → **Skip**.
-- If **Insert = a Connect-4 column-drop abstract**: feasible, but we already cover Connect Four as
-  a mode in `irad`, so **low novelty**.
-- **Action:** clarify which game(s) these are; as I read them today, neither is a strong pick.
 
 ---
 
@@ -186,15 +212,19 @@ unclear (possibly a Connect-Four-style column-insert game).
 
 ## Recommended order
 
+Low-risk first — the small-board 2-player abstracts fork `othello` and get a *strong* AI cheaply;
+YINSH and Go carry AI risk and go later.
+
 1. **Hasami shogi** — cheapest win, forks `othello`, distinct mechanic.
-2. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
-3. **Sushi Go** — first card game; broadens the library's genre mix.
-4. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
-5. *(cheap extra)* **Desdemona** as an `othello` variant — once its ruleset is pinned down.
+2. **Shong** — tiny 4×6 board → strong AI is trivial; distinct chess-like duel; reuses `irad`'s △□X.
+3. **Donuts** — novel direction-forcing + custodial capture; forks `othello`'s flip/AI.
+4. **Sushi Go** — first card game; broadens the library's genre mix.
+5. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
+6. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
+7. *(cheap extra)* **Desdemona** as an `othello` variant — once its ruleset is pinned down.
 
 Every build still follows the standard §0 setup + splash/rules screens + `play_test.go` from
 `SPEC_NEXT_GAMES.md` and the guide.
 
-**Open questions for you:** (a) which exact **Desdemona** ruleset? (b) what are **Shong** and
-**Insert / donuts** specifically — my identifications above are best-guesses and change the
-verdict for those three.
+**Only open question:** which exact **Desdemona** ruleset (edge-wrap vs. corner-turn vs. board
+shape)? The flip logic depends on it. Shong and Donuts are now identified and specced above.
