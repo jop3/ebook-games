@@ -383,3 +383,103 @@ reusable engine, clean BSD attribution.
 - **dunnet** (GPLv2 module) — hand-transcribe its small world into the data model.
 - An **original** short adventure authored in the Scott-Adams two-word shape (no IP risk).
 - Swedish translation pass of the narration text (Phase 1 ships English narration + Swedish UI).
+
+---
+
+## 10. Themed reference stories — keep these in mind while building the engine
+
+The engine is a *category*, not one game. Two worked examples below show how far **tone** can move
+on the same engine, and — importantly — each exercises **one small engine extension** worth
+designing in from the start (even if only stubbed) so later themed stories drop in as data. Both
+sources are **public domain** (Sherlock Holmes debut *A Study in Scarlet*, 1887; *Frankenstein*,
+1818), so setting/characters/plot are free to adapt.
+
+**Ground rule for "inspired by a book":** adapt **public-domain** works directly (as here), OR take
+only the *genre/mechanic* of an in-copyright book and build an original world around it. Never ship
+the text, characters, or distinctive world of a still-copyrighted book. Write **original prose** —
+don't transcribe passages even from public-domain sources; use them as a map of places and events,
+not a script.
+
+### 10a. Tone is mostly authoring — the levers (shared by both)
+None of these need new engine code; they're content + a couple of `Draw` knobs:
+- **Prose voice** — the biggest lever. The engine just prints your strings. Mystery = measured,
+  observational, companion-narrator ("you *notice*…"). Horror = cold, close, present-tense, short
+  sentences that withhold.
+- **Information discipline** — mystery *reveals* (clues accrete, you assemble them); horror
+  *conceals* (dread precedes sight). Same room system, opposite authoring stance.
+- **The greyscale / silent / static device is an ASSET here.** No audio or animation means stillness
+  and imagination — exactly how prose mystery and slow-burn horror already work. No jump-scares, no
+  timed chase sequences (e-ink can't anyway); dread comes from *what you read and choose*.
+- **Framing chrome** — per-story splash motif, title, and a serif-heavy title face set the register
+  before a word of play. Menu/rules labels can theme too ("Akta" screen, "Fallet" menu).
+
+### 10b. Engine extension A — the **Notebook / deduction** system (mystery)
+A generic sub-system the mystery theme needs and other stories can reuse:
+- Add `Clues []Clue` and `Deductions map[DeductionID]bool` to `State`. Examining objects /
+  talking to characters can **add a clue** (a short text entry).
+- A **Notebook screen** (a natural second screen on an e-reader — it literally reads as a
+  detective's pad): lists gathered clues; tap two clues to attempt a **combine** → a small
+  data table `(clueA, clueB) → deduction/unlock`; valid pair prints a conclusion and may set a flag
+  or open a path, invalid gives a neutral "nothing connects these."
+- An **accusation endgame**: a screen to name culprit / method / motive from what's known; the game
+  states which choice was unsupported if wrong.
+- Engine cost: one list + one map on `State`, one extra screen, one combine table. It's the same
+  data-plus-flags model with an added view.
+
+### 10c. Engine extension B — the **Light & Dread** system (horror)
+Reuses the cave's lamp primitive almost verbatim:
+- **Light as a dwindling resource** — a lantern/candle with `LampLife` (already in `State` for
+  Phase 2) that here is a *threat clock*, not a puzzle timer. In the dark, rooms print a shorter,
+  *wronger* description variant.
+- **A `Dread int` on `State`** — certain sights/events raise it; description variants and available
+  choices are keyed to thresholds (at high dread the narration frays, the character balks). Just an
+  integer gating which string prints — no new machinery.
+- **Irreversibility** — horror lives on consequence: use save sparingly (one slot, no free reloads
+  mid-scene) and let a few choices stick.
+- Engine cost: one or two ints on `State` + description variants keyed to them — cheap, and the
+  variant-by-state mechanism already exists for objects.
+
+### 10d. Worked story — "En Studie i Grått" (mystery, exercises §10b)
+*Original case inspired by the Holmes debut — a London-fog locked-room death; write fresh prose.*
+- **Shape:** ~18 rooms — a lodging-house crime scene (hall, victim's study, locked bedroom, back
+  stair, yard), the street/hansom, a chemist's, Scotland Yard, and the detective's rooms as a hub
+  you return to.
+- **Loop:** examine the scene → objects yield **clues** into the Notebook (a scratched ring mark, a
+  boot-print in the coal dust, a hastily-burned letter corner, a wrong-set clock). Interview 3–4
+  characters (landlady, cabman, a nervous clerk, the inspector) — each conversation is a small
+  room-like node with tappable topics that add clues.
+- **Deduction chain:** combine boot-print + coal-yard access → "entry was from the yard, not the
+  door"; burned-letter + chemist's ledger → motive; clock + cabman's timing → who had opportunity.
+  Each combine unlocks the next area or testimony.
+- **Endgame:** the **accusation screen** (culprit / how they entered / motive). Correct → resolution
+  scene; wrong → the detective names the deduction you never actually supported, and you may keep
+  investigating. No death, no fail-state — mystery rewards patience.
+- **Chrome:** motif = magnifying glass over a footprint; grave, dry, observant voice; menu "Fallet".
+
+### 10e. Worked story — "Det Levande" (horror, exercises §10c)
+*Original gothic episode inspired by Frankenstein — the created-thing and its maker; write fresh prose.*
+- **Framing device** (straight from the source's structure): open **inside a nested account** — a
+  letter / confession read at sea — which sets dread before play and justifies the retrospective,
+  doom-laden voice.
+- **Shape:** ~15 rooms — a shuttered laboratory and its cellar, a frozen courtyard, a locked
+  workshop, an attic, and the ice outside. Mostly dark: the **lantern** governs what you can see.
+- **Loop:** advance by lantern-light; `Dread` rises at each discovery (a covered slab, tools laid
+  out wrong, a hand-print too large, movement heard above). Light-management *is* the tension —
+  linger and the lantern burns down; in the dark the room text degrades and choices narrow.
+- **Consequence:** a few **irreversible** choices (open the workshop or barricade it; read the
+  journal or burn it) branch toward distinct endings — confrontation, flight, ruin. One save slot,
+  no mid-scene reloads.
+- **Chrome:** motif = a lightning-struck slab / a bolt over a still form; cold, close, present-tense
+  voice; menu "Akta". **Atmospheric, not startle-based** — the constraint pushes toward the stronger
+  kind of horror, which is what the 1818 source is anyway.
+
+### 10f. How these fit the build
+- They double as **reference/test content**: the mystery shakes out the Notebook/deduction
+  extension, the horror shakes out light/dread + irreversibility — between them, most of what the
+  engine needs beyond the plain cave.
+- Sequence: prove the **core engine on Colossal Cave (Phase 1)** first; then a themed story is
+  "core engine + one extension + authored content," no engine rewrite. Design `State` with room for
+  `Clues`/`Deductions`/`Dread` now (even unused) so adding them later isn't a migration.
+- Keep each themed story **tightly scoped** (~15–20 rooms, one solvable case / one harrowing
+  episode) — authored atmosphere is the limiting resource; a small, dense story reads far better
+  than a sprawling one that runs dry.
