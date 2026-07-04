@@ -284,18 +284,32 @@ calls: `ink.Boot`, `h.Tap/TapXY/TapRect`, `h.Press/Back`, `h.Texts`,
 the harness re-runs `Draw()` until the app stops calling `Repaint()`, so deferred
 work (Othello's AI reply lands on the next frame) settles first.
 
-**The `//go:build playtest` tag is mandatory** on every `play_test.go`: it makes
-them compile *only* under `play.sh` (which passes `-tags playtest`), so a normal
-`go build`/`go vet`, the inkstub `go test`, and the Docker `.app` build all
-ignore them. Unlike the §6 render tests, these are meant to be **committed and
-kept** as regression guards.
+**The `//go:build playtest` tag is mandatory** on every `play_test.go`, and every
+test function must be named `TestPlay…` (that's how `play.sh`'s `-run TestPlay`
+finds them). The tag makes them compile *only* under `play.sh` (which passes
+`-tags playtest`), so a normal `go build`/`go vet`, the inkstub `go test`, and the
+Docker `.app` build all ignore them. Unlike the §6 render tests, these are meant
+to be **committed and kept** as regression guards.
 
-Shipped examples cover three UI shapes: **bullscows** (keypad entry → win, checks
-Bulls/Cows scoring), **lightsout** (solves a scrambled puzzle via the grid using
-the game's own solver), **othello** (full game vs the AI to a terminal state).
-Writing the Othello test **found a real stall bug** — no AI move was queued when
-the human was forced to pass — now fixed in `othello/main.go`. That's the point:
-a play-through surfaces gameplay defects a screenshot never would. See
+**Test the whole rulebook, not the happy path.** Per the game's written rules,
+cover: every difficulty / size / mode (all "sides"); win **and** loss **and** tie
+end-states and their banners; quitting mid-play (Back key *and* the Meny button),
+restarting, replaying; input guards (illegal moves rejected, no input after the
+game ends, taps off the board ignored); and each rule checked against an
+*independent* computation in the test — a from-scratch scorer, the expected
+toggle set, the exact disc-flips — not the game agreeing with itself. When an
+end-state is hard to reach fairly, construct the board directly (the Othello
+tests set `a.gs.Board` to force each banner and a forced-pass position).
+
+The three shipped suites (~25 tests) show this on three UI shapes: **bullscows**
+(all difficulties, scoring vs an independent scorer, distinct-digit rule, quit/
+replay/rules), **lightsout** (all sizes solved via the grid, the plus-toggle rule
+verified cell-by-cell, hint = solver, Ny/quit/guards), **othello** (legal/illegal
+moves + exact flips, win/loss/tie banners, a crafted forced pass, full games vs
+the AI, hotseat driving both colours). Writing the first Othello play-through
+**found a real stall bug** — no AI move was queued when the human was forced to
+pass — now fixed in `othello/main.go`. That's the point: a play-through surfaces
+gameplay defects a screenshot never would. See
 [playtest/README.md](playtest/README.md) for the full API.
 
 ---

@@ -61,6 +61,23 @@ targets (`a.buttons`, `a.keys`, `a.menuBtns`, `a.layout.CellToScreen(...)`) and
 the pure `game` package — so you tap where the game actually put things and then
 assert against real state, exercising the whole input→logic→display chain.
 
+**Name every play test `TestPlay…`** — `play.sh` runs `go test -run TestPlay`, so
+that prefix is how it finds them (and keeps the game's own unit tests out of the
+play run).
+
+**Don't just test the happy path.** A good play suite covers, per the game's
+rules: every difficulty / board size / mode (all "sides"); the win, loss, and
+tie end-states and their banners; interruptions — quitting mid-play with Back
+and with the on-screen Meny button, restarting, replaying; input guards (illegal
+moves rejected, no input after the game ends, taps outside the board ignored);
+and each written rule checked against an **independent** computation in the test
+(e.g. a from-scratch Bulls/Cows scorer, the plus-shape toggle set, the exact
+disc-flips a move should produce) rather than trusting the game's own code to
+agree with itself. When an end-state is hard to reach by fair play, it's fine to
+construct the board directly (the tests set `a.gs.Board` to force Othello's
+win/loss/tie banners and a forced-pass position) — that's still checking the real
+rendering and rule logic.
+
 ### Harness API (`*ink.Harness`, emulator-only)
 
 | Call | What it does |
@@ -82,16 +99,25 @@ control returns.
 
 ## What the shipped tests demonstrate
 
-- **bullscows** — splash → menu → type guesses on the keypad → win; checks the
-  Bulls/Cows feedback shown matches the rules, and that "Gissa" is withheld
-  until the entry is complete.
-- **lightsout** — starts a scrambled puzzle and *solves it* by tapping the grid
-  (using the game's own GF(2) solver), proving the puzzle is winnable via the UI
-  and win-detection fires.
-- **othello** — plays a full game against the built-in AI to a terminal state,
-  checking turn alternation, the deferred AI reply, and that the winner matches
-  the disc counts. Writing this test surfaced a real stall bug (no AI move was
-  queued when the human was forced to pass); the fix is in `othello/main.go`.
+Three worked suites (≈25 tests) that go well past the happy path:
+
+- **bullscows** (9) — wins on all three difficulties; scoring driven through the
+  keypad and checked against an independent from-the-rules scorer; the
+  distinct-digit rule (used keys grey out) and "no Gissa until complete"; Sudda
+  erase; unlimited guesses (no loss state); quit with Back and with Meny then
+  restart; replay after a win; the rules screen.
+- **lightsout** (8) — solves all three board sizes through the grid (via the
+  game's GF(2) solver); the toggle rule verified cell-by-cell (interior press
+  flips the 5-cell plus, corner flips 3, edge flips 4); "Losning" overlay equals
+  the solver's cells; "Ny" reshuffles a fresh solvable puzzle; taps outside the
+  grid and after a win are ignored; quit; the rules screen.
+- **othello** (8) — legal vs illegal moves and exact disc-flips checked against a
+  pure `Apply`; the win / loss / tie banners (via constructed terminal boards); a
+  crafted forced-pass position (White genuinely has no move, verified with
+  `HasMove`, and "Pass!" renders); two full deterministic games vs the AI; a full
+  hotseat game driving **both** colours; quit; the rules screen. Writing the
+  first Othello play-through surfaced a real stall bug (no AI move was queued when
+  the human was forced to pass); the fix is in `othello/main.go`.
 
 ## Files
 
