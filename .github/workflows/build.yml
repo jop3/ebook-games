@@ -1,0 +1,94 @@
+name: Build .app binaries
+
+# Builds every game's PocketBook ARM .app in the cloud using the PocketBook Go
+# SDK Docker image. This is the heavier job (pulls the SDK container +
+# cross-compiles per module), so it runs on meaningful events rather than every
+# feature-branch commit:
+#   • push to main/master        (keeps fresh .app artifacts on main)
+#   • publish a GitHub Release    (Releases → Draft a new release → Publish)
+#   • push a version tag  v*      (git tag v1.0.0 && git push origin v1.0.0)
+#   • click "Run workflow"        (workflow_dispatch)
+#
+# The module list is discovered automatically (any top-level dir with a go.mod),
+# so new games are covered with no edit here. Each module builds as its own
+# matrix job — one game failing doesn't stop the others. Every build uploads a
+# "<game>-app" artifact; a published Release also gets each <game>.app attached
+# as a downloadable asset. Copy the .app into the device's applications/ folder
+# (POCKETBOOK_GAMEDEV_GUIDE §7–§8). Fast container-free tests run on every push
+# in ci.yml.
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # attach the .app assets to a release
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.list.outputs.modules }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: List buildable modules
+        id: list
+        run: |
+          set -euo pipefail
+          # Every top-level directory that is its own Go module (has a go.mod),
+          # excluding the playtest tooling.
+          mods=$(find . -mindepth 2 -maxdepth 2 -name go.mod -not -path './playtest/*' \
+            -printf '%h\n' | sed 's|^\./||' | sort | jq -R . | jq -cs .)
+          echo "modules=$mods" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $mods"
+
+  build:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.discover.outputs.modules) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.module }}.app in the PocketBook Go SDK container
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/${{ matrix.module }}:/app" \
+            -w /app \
+            sunsung/pocketbook-go-sdk:latest \
+            build -o "${{ matrix.module }}.app" .
+
+      - name: Verify it is an ARM binary
+        run: |
+          set -euxo pipefail
+          f="${{ matrix.module }}/${{ matrix.module }}.app"
+          ls -la "$f"
+          file "$f"
+          file "$f" | grep -q "ARM" || { echo "::error::$f is not an ARM binary"; exit 1; }
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.module }}-app
+          path: ${{ matrix.module }}/${{ matrix.module }}.app
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ matrix.module }}/${{ matrix.module }}.app" --clobber
