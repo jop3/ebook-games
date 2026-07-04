@@ -1,14 +1,15 @@
 # Build spec — recommended next games
 
-Full hand-off specs for the six games graded **✅ Build** in `GAME_FEASIBILITY_EVAL.md`, plus a
+Full hand-off specs for the games graded **✅ Build** in `GAME_FEASIBILITY_EVAL.md`, plus a
 small Othello variant-mode appendix. Build order (low-risk first):
 
-1. **Hasami** (Hasami shogi) — forks `othello`, strong AI is cheap
-2. **Shong** — tiny 4×6 chess-like duel; strong AI trivial
-3. **Munkar** (Donuts) — direction-forcing placement + custodial capture
-4. **Sushi** (Sushi Go) — the library's first card/drafting game
-5. **Ringar** (YINSH) — deep abstract; ring/marker flipping
-6. **Go** — iconic; 2-player primary, weak 9×9 AI optional
+1. **2048** — no AI, no content; swipe input; ideal greyscale fit (see GAME 7)
+2. **Hasami** (Hasami shogi) — forks `othello`, strong AI is cheap
+3. **Shong** — tiny 4×6 chess-like duel; strong AI trivial
+4. **Munkar** (Donuts) — direction-forcing placement + custodial capture
+5. **Sushi** (Sushi Go) — the library's first card/drafting game
+6. **Ringar** (YINSH) — deep abstract; ring/marker flipping
+7. **Go** — iconic; 2-player primary, weak 9×9 AI optional
 
 Every game follows the **same non-negotiable setup + splash/rules requirements as
 `SPEC_NEXT_GAMES.md` §0 and `POCKETBOOK_GAMEDEV_GUIDE.md`** — read those first. The per-game
@@ -478,6 +479,70 @@ enemy groups. **The best possible greyscale game** — the stones literally *are
 
 ---
 
+## GAME 7 — 2048  ⭐ build first (cheapest; no AI, no content)
+
+**Elevator pitch:** swipe to slide the whole grid; equal tiles merge into their sum; keep merging
+up toward the 2048 tile and a high score. A single-player, untimed score-chaser.
+
+*2048 by Gabriele Cirulli (MIT-licensed original) — traditional/open; a neutral title is fine.*
+
+### Rules (Swedish on the rules screen)
+- **4×4** grid. Each move, **swipe** up/down/left/right: every tile slides as far as it can that way.
+- **Merge:** when two tiles of the **same** value collide in the swipe direction they **merge into
+  one** tile of the summed value (2+2→4, 4+4→8, …). Each tile may merge **only once per move**, and
+  merges resolve from the leading edge (the side you swiped toward) first.
+- After every move that **changed** the board, a new tile (**2** with ~90% chance, else **4**)
+  spawns on a random empty cell. A swipe that changes nothing is **not** a move (no spawn).
+- **Win:** create a **2048** tile (offer "fortsätt" to keep playing for a higher score).
+- **Game over:** the board is full **and** no orthogonal neighbours are equal (no move possible).
+- **Score:** each merge adds the value of the new tile to the score; track a persistent **best**.
+
+### game/ model + logic (ink-free, unit-tested) — the simplest module in this repo
+- `type Board [4][4]int` (0 = empty; else the tile value).
+- `Slide(b, dir) (Board, gained int, moved bool)`: implement **one** direction (e.g. left) as
+  compress→merge-once→compress on each row; derive the other three by rotating the board, sliding
+  left, rotating back. This keeps the merge logic in a single tested function.
+- `Spawn(b, rng) Board`: place a 2 (90%) / 4 (10%) on a uniformly-random empty cell.
+- `CanMove(b) bool` (any empty cell or any equal orthogonal neighbour); `Won(b) bool` (any 2048).
+- **RNG:** the game uses Go's `math/rand` at runtime on device — fine. (Only *workflow scripts*
+  ban `Math.random`; the app doesn't.) Seed once in `Init`.
+- No AI, no generator, no solver — just these functions.
+
+### UI
+- 4×4 grid, large tiles centered; **value printed** in each tile (the distinguisher — greyscale).
+  Optionally map magnitude to a light→dark grey fill (or a thicker border) so the board reads at a
+  glance without relying on color. Score + best score above the grid.
+- **Input:** detect a **swipe** — track pointer-down point; on pointer-up, if `max(|Δx|,|Δy|)` ≥
+  ~110px, the larger axis gives the direction (guide §5a's swipe recipe, wired into both `Pointer`
+  and `Touch`). Also draw **four tap-arrows** (▲▼ render on-device; use words/triangles for ◄► per
+  guide §5a) as an explicit fallback. Redraw the resulting board with a single `FullUpdate` per move
+  (no animation — the slide is cosmetic and e-ink can't animate it anyway).
+- Banners: "Du klarade 2048!" (with Fortsätt/Ny) and "Spelet slut" (with Ny). Buttons "Ny", "Meny".
+- Menu: "Spela", "Regler" (no difficulty/opponent — single mode). Optionally a target toggle
+  (1024/2048/4096) for a shorter/longer game.
+- **Splash motif:** four tiles showing `2  4  8 16` in a row (or a small 2×2 of merging tiles).
+
+### Gotchas
+- **Merge-once-per-move** is the classic bug: `2 2 2 2` swiped left → `4 4 0 0`, **not** `8`.
+  Also `4 4 2 2` → `8 4 0 0`. Unit-test these and `2 2 4` → `4 4 0`.
+- A swipe that doesn't change the board must **not** spawn a tile or count as a move — test it.
+- Derive all four directions from one via rotation so the merge rule lives in exactly one place;
+  unit-test each direction against hand-computed results.
+- Game-over detection must allow moves that only merge (a full board can still be playable if equal
+  neighbours exist).
+- Persist best score to a file in the app's data dir; tolerate a missing/corrupt file (default 0).
+
+### Definition of done
+- [ ] `game/` unit tests: `Slide` in all four directions incl. the merge-once cases above;
+      no-change-no-spawn; win detection; game-over detection; score accumulation.
+- [ ] `play_test.go` drives a scripted sequence of swipes and asserts board/score, plus a forced
+      game-over board and a forced 2048 win.
+- [ ] Splash + rules (Swedish) + menu; swipe **and** tap-arrow input both work; emulator-clean.
+- [ ] Best-score persistence works and survives a restart (and a missing file).
+- [ ] ARM `.app` `2048.app`, icon + `_f`, view.json @Games.
+
+---
+
 ## Appendix — Anti-Othello variant mode (not a new app)
 
 The recommended substitute for a standalone "Desdemona" (see `GAME_FEASIBILITY_EVAL.md`): add a
@@ -493,7 +558,9 @@ The recommended substitute for a standalone "Desdemona" (see `GAME_FEASIBILITY_E
 ---
 
 ## Cross-game build order & shared checklist
-Build in the numbered order (risk-ascending). For **every** game, the definition-of-done above plus
+Build in the **risk-ascending order from the top of this doc** (2048 → Hasami → Shong → Munkar →
+Sushi → Ringar → Go), not the GAME-section numbers (2048 is specced last as GAME 7 but built
+first). For **every** game, the definition-of-done above plus
 the universal gates from `SPEC_NEXT_GAMES.md` §"Definition of done": pure `game/` logic with tests,
 splash+rules (Swedish), menu with mode/difficulty + "Regler", all screens emulator-verified at worst
 case, ARM `.app` under a clean name with an 8-bit icon (+`_f`) registered in `view.json` @Games,

@@ -12,6 +12,7 @@ grades a **new** shortlist and recommends what to build.
 | **Hasami shogi** | ★★★★★ | Low–Medium | ✅ **Build** — cheap (fork `othello`), distinct sandwich-capture mechanic |
 | **Sushi Go** | ★★★★☆ | Medium | ✅ **Build** — the library's first *card/drafting* game; good genre gap-fill |
 | **Go** | ★★★★☆ (2P) | Medium (+High for AI) | ✅ **Build 2-player / 9×9**; ship a weak 9×9 AI, don't promise a strong one |
+| **2048** | ★★★★☆ | **Low** | ✅ **Build** — trivial logic, no AI, number-based (greyscale-perfect); animation is cosmetic so e-ink is fine |
 | **Shong** | ★★★★★ | Low–Medium | ✅ **Build** — chess-like on a tiny 4×6 board; distinct shapes, and the small board makes a *strong* AI easy |
 | **Donuts** ("Insert") | ★★★★☆ | Medium | ✅ **Build** — genuinely novel 2-player abstract (direction-forcing + custodial capture + connect-5) |
 | **Desdemona** | ★★☆☆☆ | Low | ❌ **Skip as standalone** — its most-popular form is just renamed Reversi (= our Othello). Add an Othello *variant mode* instead |
@@ -110,6 +111,30 @@ players.
 - **Verdict:** **build it as 2-player hot-seat + 9×9**, with an optional weak AI clearly labeled.
   Iconic, gorgeous on e-ink, and the 2-player path is low-risk. Don't over-invest in AI strength.
   **Medium effort** (much higher only if you chase a strong AI — don't).
+
+### 2048 — sliding-merge score-chaser
+4×4 grid; swipe to slide all tiles one way; equal tiles that collide **merge** into their sum
+(each tile merges once per move); a new 2 or 4 spawns each move; reach the 2048 tile (then keep
+going); game over when the board is full with no merge.
+
+- **Logic:** trivial and pure-Go — slide+merge per direction, random spawn, win/game-over
+  detection. **No AI, no generator, no content pack** — the lowest-effort build on the list.
+- **Input:** four swipes (up/down/left/right). The guide (§5a) **already documents swipe detection
+  on this device** (added for Läsordning scrolling) — plus four on-screen tap-arrows as a fallback.
+  Great tap/swipe fit.
+- **Render:** 4×4 grid of **numbered** tiles → the number is the distinguisher, **greyscale-perfect**
+  (magnitude can also map to grey shades). Reuse `sudoku`'s digit drawing + `lightsout`'s grid.
+- **Novelty:** the library's first **arcade / score-chaser** — a different pull from the
+  logic/strategy titles. Optional best-score persistence to a file.
+
+**Why this passes when Bejeweled didn't** (they look superficially similar):
+- 2048 is **turn-based and untimed** — its slide/merge animation is **purely cosmetic**, so
+  rendering just the before→after board with one `FullUpdate` per move plays correctly. Bejeweled's
+  appeal *is* the real-time cascade animation, which e-ink can't deliver.
+- 2048 distinguishes tiles by **printed number**; Bejeweled distinguishes gems by **color**.
+
+**Verdict:** ✅ **Build.** Cheapest logic here, ideal greyscale fit, input already supported.
+**Low effort.**
 
 ---
 
@@ -217,16 +242,17 @@ just a **plain Reversi/Othello** game under a different name. The handful of BGG
 
 ## Recommended order
 
-Low-risk first — the small-board 2-player abstracts fork `othello` and get a *strong* AI cheaply;
-YINSH and Go carry AI risk and go later.
+Low-risk first — **2048** needs no AI at all; the small-board 2-player abstracts fork `othello` and
+get a *strong* AI cheaply; YINSH and Go carry AI risk and go later.
 
-1. **Hasami shogi** — cheapest win, forks `othello`, distinct mechanic.
-2. **Shong** — tiny 4×6 board → strong AI is trivial; distinct chess-like duel; reuses `irad`'s △□X.
-3. **Donuts** — novel direction-forcing + custodial capture; forks `othello`'s flip/AI.
-4. **Sushi Go** — first card game; broadens the library's genre mix.
-5. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
-6. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
-7. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
+1. **2048** — cheapest overall (no AI, no content); ideal greyscale fit; swipe input already supported.
+2. **Hasami shogi** — cheap, forks `othello`, distinct mechanic.
+3. **Shong** — tiny 4×6 board → strong AI is trivial; distinct chess-like duel; reuses `irad`'s △□X.
+4. **Donuts** — novel direction-forcing + custodial capture; forks `othello`'s flip/AI.
+5. **Sushi Go** — first card game; broadens the library's genre mix.
+6. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
+7. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
+8. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
    worthwhile substitute for a standalone Desdemona.
 
 Every build still follows the standard §0 setup + splash/rules screens + `play_test.go` from
