@@ -162,6 +162,21 @@ element glyphs must stay legible at 85px.
 Keep static clutter down: draw laser **beams only during the laser sub-step** of resolution, not on
 the idle board (emitters always show).
 
+### Tile layering & the busy-tile cap (so a crowded tile stays legible)
+Multiple elements share a tile without turning to mush because each owns a **different region** of
+the cell, drawn back-to-front in a fixed **z-order**:
+1. **Interior background:** belt chevron / express double-chevron OR gear arc OR pit hatch OR repair
+   wrench OR checkpoint number (these are mutually exclusive on a tile — a tile is one *floor kind*).
+2. **Edges:** walls (thick bars) and laser emitters (small nubs) — always on the cell border, never
+   colliding with the interior glyph.
+3. **Top:** the robot, drawn at ~70% of the cell with its heading nose.
+So the worst legible tile is e.g. "express belt + a wall on one edge + a robot on top" — three
+non-overlapping regions, fine even at 85px. **Generator legibility cap: at most ONE interior
+element + at most TWO wall/laser edge features per tile.** A checkpoint or pit tile carries **no belt
+or gear** (you shouldn't be conveyed off your own goal, and it keeps the goal tile clean). Verify the
+worst case in the emulator (§9): a 12×12 board with a robot standing on an express belt next to a
+laser emitter and a wall must still read clearly.
+
 ### Robot glyphs — must show BOTH identity and FACING
 Reuse irad's identity approach (distinct marks, not shades) but add a **heading nose**:
 - Robot body = a shape with a clear pointed "nose" drawn in `Facing` direction (e.g. a house/chevron
@@ -266,6 +281,40 @@ procedural generator for replayability. The generator follows the library's univ
 Fixed courses live as literal tile arrays in `game/courses.go` (compact rune-map + a decoder, e.g.
 `.` floor, `>` belt-east, `»` express-east, `O` pit, `+` repair, `1` checkpoint-1, `#`+edge for
 walls, `L^` laser-north, `A` antenna, `a` dock). The same decoder can load emulator test fixtures.
+
+### 5a. Difficulty progression & element budget (how conveyors/traps/lasers scale)
+Difficulty is driven by **which elements appear, how densely, and how adversarially they're placed** —
+*not* mainly by board size. Elements unlock as the tier rises, so a beginner learns one mechanic at a
+time and a hard course weaponizes all of them. The generator reads a per-tier **element budget**:
+
+| Tier (Bana-svårighet) | Board | Checkpts | Elements introduced (cumulative)                          | Density / teeth |
+|-----------------------|-------|----------|-----------------------------------------------------------|-----------------|
+| **Lätt** ("Träning")  | 8×8   | 2–3      | walls, **single conveyors**, checkpoints, a few **pits**   | wide lanes; pits kept *off* the natural path; no express, no gears, no lasers |
+| **Mellan**            | 10×10 | 3        | + **express belts**, **gears**, **single-barrel lasers**, chokepoints | pits placed *beside* belt lanes (belts become a threat); one laser lane crosses an approach |
+| **Svår** ("Dödsfabrik")| 12×12| 4–5      | + **double-barrel lasers**, **belt→pit** routes, **gear-at-chokepoint**, laser **crossfire** | pits flank checkpoint approaches; express belts overshoot goals; hazards actively fight you |
+
+**Difficulty is placement, not just count.** The generator makes hazards *matter* by pointing them at
+where you want to go — this is what turns "elements on a board" into "traps":
+- **Conveyors as hazards, not scenery:** at Mellan+, route a belt so a careless robot is carried
+  *toward* a pit or *past* its checkpoint (overshoot), so you must plan a counter-move or step off the
+  belt. Express belts (2/register) near a checkpoint create real overshoot pressure.
+- **Pits are the trap system:** beyond raw density, place pits where a belt would dump a mis-timed
+  robot (**belt→pit**), and flanking the last tile before a checkpoint so a sloppy approach dies. The
+  **no-belt-death-loop** verify (§5 step 8) still guarantees a *card exists* to save you — it's a trap,
+  not a guaranteed kill.
+- **Lasers gate the approach:** aim emitters **down the natural lane to a checkpoint**, so you must
+  time your program to not be standing in the beam on the wrong register — or take the damage on
+  purpose to keep pace. Double-barrel at Svår makes that toll bite (2 dmg = a card lost next round).
+- **Gears at chokepoints** spin you off-heading right where you need precise alignment, forcing an
+  extra corrective register.
+- **The "not trivial" grade (§5 step 8) enforces engagement:** if a straight Move-forward program
+  would reach a checkpoint, the course is regenerated — so the tier's hazards are on the *only* viable
+  path, not decoration you can skirt.
+
+Because course difficulty and **AI difficulty (§6) are separate knobs**, every combination is valid:
+a gentle Träning board against Expert bots, or a Dödsfabrik against clumsy Nybörjare bots that keep
+crashing into its pits (often the funniest mode). The element budget is a small literal table in
+`game/difficulty.go` so it's trivial to retune after playtesting.
 
 ---
 
