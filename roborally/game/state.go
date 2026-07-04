@@ -63,8 +63,9 @@ func NewGame(board *Board, nAI int, aiDiff AILevel, seed int64) *GameState {
 		rng:    rand.New(rand.NewSource(seed)),
 	}
 	profiles := aiProfiles(aiDiff, nAI, s.rng)
+	dockOrder := s.rng.Perm(len(board.Docks)) // randomise which robot starts where
 	for i := 0; i < total; i++ {
-		d := board.Docks[i]
+		d := board.Docks[dockOrder[i]]
 		r := Robot{
 			Pos: d.Pos, Facing: d.Facing,
 			NextCheck: 1, ArchivePos: d.Pos, ArchiveDir: d.Facing,

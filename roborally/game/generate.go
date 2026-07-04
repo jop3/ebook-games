@@ -151,20 +151,53 @@ func buildCandidate(bd budget, rng *rand.Rand) *Board {
 		}
 	}
 
-	// Start docks clustered near checkpoint 1, facing toward it.
-	cp1 := checks[0]
-	for len(b.Docks) < 4 {
-		p, ok := randomPlain(b, rng)
-		if !ok {
-			break
-		}
-		b.At(p).StartDock = uint8(len(b.Docks) + 1)
-		b.Docks = append(b.Docks, dock{Pos: p, Facing: dirToward(p, cp1)})
-	}
-	if len(b.Docks) == 0 {
+	// Start docks: a row of four adjacent squares along the bottom edge, facing
+	// up into the board. The starting line is cleared of hazards so every robot
+	// gets a fair launch; which robot lands in which dock is randomised at
+	// NewGame time.
+	if !placeBottomDocks(b, rng) {
 		return nil
 	}
 	return b
+}
+
+// placeBottomDocks lays four adjacent start docks on the bottom row, clearing
+// any hazards under them. Returns false if no four-wide gap free of a checkpoint
+// or the antenna exists there.
+func placeBottomDocks(b *Board, rng *rand.Rand) bool {
+	const n = 4
+	y := b.H - 1
+	var starts []int
+	for x0 := 0; x0+n <= b.W; x0++ {
+		ok := true
+		for i := 0; i < n; i++ {
+			t := b.At(image.Pt(x0+i, y))
+			if t.Checkpoint != 0 || t.Antenna {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			starts = append(starts, x0)
+		}
+	}
+	if len(starts) == 0 {
+		return false
+	}
+	x0 := starts[rng.Intn(len(starts))]
+	for i := 0; i < n; i++ {
+		p := image.Pt(x0+i, y)
+		t := b.At(p)
+		t.Kind = FloorPlain
+		t.Belt = DirNone
+		t.BeltExpress = false
+		t.Gear = GearNone
+		t.Laser = DirNone
+		t.Walls = 0
+		t.StartDock = uint8(i + 1)
+		b.Docks = append(b.Docks, dock{Pos: p, Facing: N})
+	}
+	return true
 }
 
 // dirToward picks the cardinal direction from a that most reduces distance to b.
@@ -255,14 +288,14 @@ func plainCourse(bd budget) *Board {
 		p := image.Pt(clampi(x, 0, sz-1), clampi(y, 0, sz-1))
 		b.At(p).Checkpoint = uint8(ord)
 	}
-	cp1, _ := b.CheckpointPos(1)
-	for i := 0; i < 4; i++ {
-		p := image.Pt(clampi(i, 0, sz-1), 0)
+	y := sz - 1
+	for i := 0; i < 4 && i < sz; i++ {
+		p := image.Pt(i, y)
 		if isSpecial(b.At(p)) {
 			continue
 		}
 		b.At(p).StartDock = uint8(len(b.Docks) + 1)
-		b.Docks = append(b.Docks, dock{Pos: p, Facing: dirToward(p, cp1)})
+		b.Docks = append(b.Docks, dock{Pos: p, Facing: N})
 	}
 	return b
 }
