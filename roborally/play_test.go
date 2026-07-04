@@ -197,26 +197,75 @@ func TestPlayAllDifficulties(t *testing.T) {
 	}
 }
 
-// TestPlayScreens writes screenshots of the main screens for visual review.
+// TestPlayScreens writes screenshots of every screen for visual review.
 func TestPlayScreens(t *testing.T) {
 	dir := shotDir()
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture")
 	}
-	a, h := boot(t)
-	h.Screenshot(dir + "/menu.png")
+	// Splash (before dismissing it).
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Screenshot(dir + "/01_splash.png")
+	h.TapXY(500, 700) // -> menu
+	h.Screenshot(dir + "/02_menu.png")
+
+	// Rules screen.
+	h.TapRect(a.rulesBtn)
+	h.Screenshot(dir + "/03_rules.png")
+	h.Back() // -> menu
+
+	// Program screen (empty then full) on the default Mellan course.
 	startGameVia(t, a, h)
-	h.Screenshot(dir + "/program_empty.png")
+	h.Screenshot(dir + "/04_program_empty.png")
 	for i := range a.handRects {
 		if a.gs.ProgramComplete() {
 			break
 		}
 		h.TapRect(a.handRects[i])
 	}
-	h.Screenshot(dir + "/program_full.png")
+	h.Screenshot(dir + "/05_program_full.png")
+
+	// First resolution frame.
 	h.TapRect(a.korBtn)
-	h.Screenshot(dir + "/resolve.png")
-	h.TapRect(a.rulesBtn) // no-op on resolve; ignore
+	h.Screenshot(dir + "/06_resolve_r1.png")
+
+	// Play several rounds so robots spread out, then grab a mid-game board.
+	for round := 0; round < 8 && a.screen != screenDone; round++ {
+		switch a.screen {
+		case screenProgram:
+			for i := range a.handRects {
+				if a.gs.ProgramComplete() {
+					break
+				}
+				h.TapRect(a.handRects[i])
+			}
+			h.TapRect(a.korBtn)
+		case screenResolve:
+			h.TapRect(a.nastaBtn)
+		}
+	}
+	h.Screenshot(dir + "/07_midgame.png")
+
+	// Drive to a finished game and capture the result screen.
+	for round := 0; round < 200 && a.screen != screenDone; round++ {
+		switch a.screen {
+		case screenProgram:
+			for i := range a.handRects {
+				if a.gs.ProgramComplete() {
+					break
+				}
+				h.TapRect(a.handRects[i])
+			}
+			h.TapRect(a.korBtn)
+		case screenResolve:
+			h.TapRect(a.nastaBtn)
+		}
+	}
+	h.Screenshot(dir + "/08_result.png")
 }
 
 func shotDir() string { return shotDirEnv }
