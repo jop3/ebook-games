@@ -170,11 +170,12 @@ func TestCheckpointOrder(t *testing.T) {
 	}
 }
 
-func TestRespawnAddsDamage(t *testing.T) {
+func TestRespawnResetsDamage(t *testing.T) {
 	b := plain(4, 3)
 	b.Docks = []dock{{Pos: image.Pt(0, 0), Facing: E}}
 	r := rb(1, 1, E)
 	r.ArchivePos = image.Pt(1, 1)
+	r.Damage = 8 // already heavily damaged
 	s := newTestGame(b, r)
 	s.killRobot(0)
 	s.endRoundForTest()
@@ -182,7 +183,7 @@ func TestRespawnAddsDamage(t *testing.T) {
 		t.Fatal("robot should respawn alive")
 	}
 	if s.Robots[0].Damage != 2 {
-		t.Fatalf("respawn should add 2 damage, got %d", s.Robots[0].Damage)
+		t.Fatalf("respawn should RESET damage to 2 (not add), got %d", s.Robots[0].Damage)
 	}
 	if s.Robots[0].Pos != image.Pt(1, 1) {
 		t.Fatalf("respawn should return to archive, got %v", s.Robots[0].Pos)
@@ -198,7 +199,7 @@ func (s *GameState) endRoundForTest() {
 			s.Robots[i].Facing = s.Robots[i].ArchiveDir
 			s.Robots[i].Alive = true
 			s.Robots[i].deadThisRound = false
-			s.damageRobot(i, 2)
+			s.Robots[i].Damage = 2
 		}
 	}
 }
@@ -251,6 +252,38 @@ func TestExpertReachesCheckpoints(t *testing.T) {
 	}
 	if rounds <= 0 {
 		t.Fatalf("unexpected round count %d", rounds)
+	}
+}
+
+// TestGameFinishesNoSpiral drives full multi-robot games (human played by the
+// planner too) to completion across difficulties and seeds, guarding against
+// stalls/livelocks and the damage spiral that a too-low hand floor or an
+// additive respawn would reintroduce.
+func TestGameFinishesNoSpiral(t *testing.T) {
+	for _, diff := range []CourseDiff{DiffEasy, DiffMedium, DiffHard} {
+		for seed := int64(1); seed <= 4; seed++ {
+			b := GenerateCourse(diff, seed)
+			gs := NewGame(b, 3, AIMedium, seed*31+7)
+			finished := false
+			for round := 0; round < 250; round++ {
+				if gs.Phase == PhaseProgram {
+					gs.Registers[0] = gs.planAI(0) // drive the human competently too
+					if !gs.StartResolve() {
+						t.Fatalf("%v seed %d: StartResolve failed", diff, seed)
+					}
+				}
+				for gs.Phase == PhaseResolve {
+					gs.StepRegister()
+				}
+				if gs.Phase == PhaseDone {
+					finished = true
+					break
+				}
+			}
+			if !finished {
+				t.Fatalf("%v seed %d: game did not finish in 250 rounds (stall/damage spiral?)", diff, seed)
+			}
+		}
 	}
 }
 

@@ -84,11 +84,14 @@ func NewGame(board *Board, nAI int, aiDiff AILevel, seed int64) *GameState {
 	return s
 }
 
-// handSize is the number of cards a robot draws given its damage.
+// handSize is the number of cards a robot draws given its damage. The floor of
+// 3 keeps a heavily damaged robot able to move and turn — without it, a robot
+// stuck in a laser lane (or that can't reach a checkpoint to heal) spirals to a
+// 1-card hand and the race can lock up.
 func handSize(damage int) int {
 	n := 9 - damage
-	if n < 1 {
-		n = 1
+	if n < 3 {
+		n = 3
 	}
 	return n
 }

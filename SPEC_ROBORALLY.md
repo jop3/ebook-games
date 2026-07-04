@@ -53,7 +53,8 @@ spec assumes 1072×1448 portrait (effective drawable height **1340**), greyscale
 - Board elements: **conveyor belts (single + express), rotating gears, walls, wall lasers, pits,
   repair sites, checkpoints**.
 - **Collisions push** robots (chained); shove enemies into pits / off the edge.
-- **Damage** → smaller hand next round; death → respawn at last checkpoint with +2 damage.
+- **Damage** → smaller hand next round; death → respawn at last checkpoint, **rebooting to 2
+  damage** (a reset, not an add — see the anti-spiral note in §4).
 - Race: first to touch the **last checkpoint in order** wins.
 
 **Drop / defer for v1 (add back in v2, §10):**
@@ -133,7 +134,8 @@ type GameState struct {
 
 Keep the hand deck realistic: a fixed **program deck** per robot (RR's distribution, scaled down —
 e.g. Move1×18, Move2×12, Move3×6, BackUp×6, RotR×18, RotL×18, UTurn×6), drawn and reshuffled from
-the discard when short. Hand size = `9 - Damage` (min 1). This deck-limits both human and AI to the
+the discard when short. Hand size = `9 - Damage` (**min 3**, not 1 — see the anti-spiral note in
+§4). This deck-limits both human and AI to the
 same authentic constraint — you often *can't* play the move you want, which is itself a source of
 good chaos and keeps the AI honestly imperfect (§6).
 
@@ -240,8 +242,16 @@ Per round, after all 5 registers are locked in, for **each register k = 1..5**:
    and updates archive. Touching checkpoints **out of order does nothing**. Reaching `> NCheck`
    sets `Winner` and ends the game immediately.
 
-**End of round:** respawn the dead — reset `Pos/Facing` to `Archive*`, `+2` damage, `Alive = true`.
-Discard used registers, draw new hands (`9 - Damage`), back to `PhaseProgram`.
+**End of round:** respawn the dead — reset `Pos/Facing` to `Archive*`, **set damage to 2**
+(`Alive = true`). Discard used registers, draw new hands (`9 - Damage`), back to `PhaseProgram`.
+
+> **Anti-spiral invariant (MANDATORY — learned the hard way).** Two rules keep the race from
+> locking up, and both must hold for any future tuning: **(1) respawn RESETS damage to 2, it does not
+> add** — an additive reboot lets a robot that dies at high damage climb to the cap and never
+> recover; **(2) hand size floors at 3, not 1** — otherwise a robot stuck taking laser damage with no
+> reachable checkpoint/repair to heal spirals to a 1-card hand, can't move, can't die to reset, and
+> stalls the whole game. `TestGameFinishesNoSpiral` drives full multi-robot games to completion
+> across every difficulty/seed and fails if either regresses.
 
 Implement each of these as a small pure function (`applyMove`, `pushChain`, `stepBelts`,
 `spinGears`, `fireWallLasers`, `fireRobotLasers`, `touchCheckpoints`) so the play-tests can assert
@@ -454,7 +464,7 @@ const (
   skip; just drop to menu). Meny button on the status strip does the same.
 - Splash motif: robot glyph on a tile + a conveyor double-chevron + a checkpoint "1" flag — line-art.
 - Rules screen: **full Swedish rules** — explain registers, priority (antenna), the board-element
-  order (band → kugghjul → lasrar), pushing, pits/respawn (+2 skada), damage → färre kort, and the
+  order (band → kugghjul → lasrar), pushing, pits/respawn (reboot till 2 skada), damage → färre kort, and the
   win condition (checkpoints i ordning).
 
 ---
@@ -474,7 +484,7 @@ itself (guide §6b):
 - **Board elements:** independent checks for express-carries-2 vs single-carries-1, a **belt curve
   rotating** the robot, converging belts **both blocked**, a **gear** rotation, a **wall laser**
   dealing `LaserCount`, a **robot laser** dealing 1.
-- **Death/respawn:** step off the edge and onto a pit → dies, respawns at **archive with +2 damage**
+- **Death/respawn:** step off the edge and onto a pit → dies, respawns at **archive, rebooting to 2 damage (reset)**
   at round end; hand size next round = `9 - Damage`.
 - **Checkpoints:** touching out of order does nothing; in order advances `NextCheck` and updates
   archive; reaching the last one sets `Winner` and ends the game (banner shows).

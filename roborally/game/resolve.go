@@ -355,7 +355,10 @@ func (s *GameState) endRound() {
 			s.Robots[i].Facing = s.Robots[i].ArchiveDir
 			s.Robots[i].Alive = true
 			s.Robots[i].deadThisRound = false
-			s.damageRobot(i, 2)
+			// Reboot with a fresh 2 damage (RR-faithful) — a reset, NOT an
+			// increment, so dying clears an accumulated damage spiral instead of
+			// pushing the robot toward a permanent locked hand.
+			s.Robots[i].Damage = 2
 		}
 		s.Robots[i].damagedLastRound = s.Robots[i].tookDamage
 		s.Robots[i].tookDamage = false
