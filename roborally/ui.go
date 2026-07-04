@@ -453,10 +453,15 @@ func drawStartDock(rect image.Rectangle, num, cell int, f *Fonts) {
 	ink.DrawString(image.Pt(r.Min.X+n/2, center(rect).Y-14), "S"+itoa(num))
 }
 
-// drawRobot draws a robot as a round token with a prominent heading nose and its
-// id — a shape deliberately distinct from the square checkpoint/gear boxes so a
-// robot never reads as a board element. Robot 1 (the human) is a solid black
-// token; the AI robots are white tokens with a thick ring and a distinct fill.
+// drawRobot draws a robot as a round token with a prominent heading arrowhead
+// and a per-robot emblem — a shape deliberately distinct from the square
+// checkpoint/gear boxes so a robot never reads as a board element, and each
+// robot is told apart by its emblem (not just a number):
+//
+//	1 (you)  solid black disc      3  striped disc
+//	2        ring (hollow)         4  bullseye (ring + centre dot)
+//
+// A small id number sits in the cell corner as a secondary aid.
 func drawRobot(rect image.Rectangle, id int, facing game.Dir, alive, human bool, f *Fonts) {
 	body := pad(rect, rect.Dx()/7)
 	if !alive {
@@ -465,38 +470,33 @@ func drawRobot(rect image.Rectangle, id int, facing game.Dir, alive, human bool,
 		fillDisc(pad(body, body.Dx()/6), ink.White)
 		return
 	}
-	solid := id == 0
 	// The heading arrowhead protrudes past the token — drawn first so the token
 	// body sits on top of its base (a clean "piece with a pointed front").
 	fillNose(rect, body, facing)
-	if solid {
+	ring := func() {
 		fillDisc(body, ink.Black)
-	} else {
-		fillDisc(body, ink.Black)                     // ring
-		fillDisc(pad(body, body.Dx()/7+2), ink.White) // hollow centre
-		switch id {
-		case 2:
-			for x := body.Min.X + 6; x < body.Max.X-4; x += 6 {
-				ink.DrawLine(image.Pt(x, body.Min.Y+body.Dy()/3), image.Pt(x, body.Max.Y-body.Dy()/3), ink.DarkGray)
+		fillDisc(pad(body, body.Dx()/7+2), ink.White)
+	}
+	switch id {
+	case 0: // you: solid disc
+		fillDisc(body, ink.Black)
+	case 1: // ring
+		ring()
+	case 2: // striped disc: black disc cut by white bars
+		fillDisc(body, ink.Black)
+		bar := body.Dy() / 7
+		for _, y0 := range []int{body.Min.Y + body.Dy()/3, body.Min.Y + 2*body.Dy()/3} {
+			for dy := 0; dy < bar; dy++ {
+				ink.DrawLine(image.Pt(body.Min.X, y0+dy), image.Pt(body.Max.X, y0+dy), ink.White)
 			}
-		case 3:
-			cx, cy := center(body).X, center(body).Y
-			ink.FillArea(image.Rect(cx-5, cy-5, cx+5, cy+5), ink.Black)
 		}
+	case 3: // bullseye: ring with a solid centre dot
+		ring()
+		fillDisc(pad(body, body.Dx()*5/16), ink.Black)
 	}
-	// id digit
-	f.Card.SetActive(idTextColor(solid))
-	lbl := itoa(id + 1)
-	w := ink.StringWidth(lbl)
-	c := center(body)
-	ink.DrawString(image.Pt(c.X-w/2, c.Y-14), lbl)
-}
-
-func idTextColor(solid bool) color.Color {
-	if solid {
-		return ink.White
-	}
-	return ink.Black
+	// small id number in the top-left corner of the cell (secondary aid)
+	f.Small.SetActive(ink.DarkGray)
+	ink.DrawString(image.Pt(rect.Min.X+4, rect.Min.Y+2), itoa(id+1))
 }
 
 func drawNose(body image.Rectangle, facing game.Dir, col color.Color) {
@@ -633,7 +633,7 @@ var rulesParagraphs = []string{
 	"Registren körs ett i taget. Den robot som är närmast prioritetsantennen rör sig först. Robotar knuffar varandra — rakt ner i hål eller ut över kanten!",
 	"Efter varje register agerar brädet: transportband (dubbel pil = expressband, flyttar två) för dig, kugghjul vrider dig, vägglasrar och robotlasrar ger skada.",
 	"Faller du i ett hål eller ut över kanten återuppstår du vid din senaste kontrollpunkt med två skadepoäng. Mer skada = färre kort nästa runda.",
-	"På brädet: robotarna är runda pjäser med en nos som visar riktningen — du styr den fyllda pjäsen (1). Kontrollpunkter är numrerade rutor. Startrutor är markerade med hörn och S1–S4.",
+	"På brädet: robotarna är runda pjäser med en nos som visar riktningen. Varje robot har ett eget mönster — 1 (du) fylld, 2 ring, 3 randig, 4 måltavla. Kontrollpunkter är numrerade rutor; startrutor är markerade med hörn och S1–S4.",
 	"Tryck på ett handkort för att lägga det i nästa register. Tryck på ett register för att ta bort kortet. Tryck Kör när alla fem är fyllda.",
 }
 

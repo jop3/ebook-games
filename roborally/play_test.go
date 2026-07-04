@@ -218,6 +218,14 @@ func TestPlayScreens(t *testing.T) {
 	h.Screenshot(dir + "/03_rules.png")
 	h.Back() // -> menu
 
+	// Use 3 AI opponents so all four robot emblems appear on the board.
+	for _, row := range a.menuRows {
+		if row.id == "nai" {
+			for a.cfg.nAI != 3 {
+				h.TapRect(row.rect)
+			}
+		}
+	}
 	// Program screen (empty then full) on the default Mellan course.
 	startGameVia(t, a, h)
 	h.Screenshot(dir + "/04_program_empty.png")
