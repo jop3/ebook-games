@@ -217,6 +217,9 @@ func drawTile(rect image.Rectangle, t *game.Tile, cell int, f *Fonts) {
 	if t.Checkpoint != 0 {
 		drawCheckpoint(rect, int(t.Checkpoint), f)
 	}
+	if t.StartDock != 0 {
+		drawStartDock(rect, int(t.StartDock), cell, f)
+	}
 	if t.Laser != game.DirNone {
 		drawLaserEmitter(rect, t.Laser, cell)
 	}
@@ -348,39 +351,139 @@ func drawWalls(rect image.Rectangle, t *game.Tile) {
 	}
 }
 
-// drawRobot draws a robot with an identity pattern, a heading nose, and its id.
+// isqrt is an integer square root (floor).
+func isqrt(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	x := n
+	y := (x + 1) / 2
+	for y < x {
+		x = y
+		y = (x + n/x) / 2
+	}
+	return x
+}
+
+// fillDisc fills an approximate circle inscribed in r.
+func fillDisc(r image.Rectangle, col color.Color) {
+	cx, cy := center(r).X, center(r).Y
+	rad := r.Dx() / 2
+	if r.Dy()/2 < rad {
+		rad = r.Dy() / 2
+	}
+	rr := rad * rad
+	for dy := -rad; dy <= rad; dy++ {
+		hw := isqrt(rr - dy*dy)
+		ink.DrawLine(image.Pt(cx-hw, cy+dy), image.Pt(cx+hw, cy+dy), col)
+	}
+}
+
+// fillTriangle fills the triangle a-b-c (black) by scanline.
+func fillTriangle(a, b, c image.Point) {
+	minY := a.Y
+	if b.Y < minY {
+		minY = b.Y
+	}
+	if c.Y < minY {
+		minY = c.Y
+	}
+	maxY := a.Y
+	if b.Y > maxY {
+		maxY = b.Y
+	}
+	if c.Y > maxY {
+		maxY = c.Y
+	}
+	edges := [3][2]image.Point{{a, b}, {b, c}, {c, a}}
+	for y := minY; y <= maxY; y++ {
+		var xs []int
+		for _, e := range edges {
+			p, q := e[0], e[1]
+			if p.Y == q.Y {
+				continue
+			}
+			if (y >= p.Y && y < q.Y) || (y >= q.Y && y < p.Y) {
+				x := p.X + (q.X-p.X)*(y-p.Y)/(q.Y-p.Y)
+				xs = append(xs, x)
+			}
+		}
+		if len(xs) >= 2 {
+			lo, hi := xs[0], xs[1]
+			if lo > hi {
+				lo, hi = hi, lo
+			}
+			ink.DrawLine(image.Pt(lo, y), image.Pt(hi, y), ink.Black)
+		}
+	}
+}
+
+// fillNose draws a black arrowhead protruding from the token toward facing.
+func fillNose(cell, body image.Rectangle, facing game.Dir) {
+	c := center(body)
+	rad := body.Dx() / 2
+	reach := rad + cell.Dx()/7
+	base := rad * 3 / 4
+	dir := facing.Step()
+	perpX, perpY := -dir.Y, dir.X
+	tip := image.Pt(c.X+dir.X*reach, c.Y+dir.Y*reach)
+	b1 := image.Pt(c.X+dir.X*base/2+perpX*base, c.Y+dir.Y*base/2+perpY*base)
+	b2 := image.Pt(c.X+dir.X*base/2-perpX*base, c.Y+dir.Y*base/2-perpY*base)
+	fillTriangle(tip, b1, b2)
+}
+
+// drawStartDock marks a starting square with corner brackets and its number, so
+// empty start positions are visible on the board.
+func drawStartDock(rect image.Rectangle, num, cell int, f *Fonts) {
+	r := pad(rect, cell/8)
+	n := cell / 4
+	corners := [4][3]image.Point{
+		{r.Min, image.Pt(r.Min.X + n, r.Min.Y), image.Pt(r.Min.X, r.Min.Y + n)},
+		{image.Pt(r.Max.X, r.Min.Y), image.Pt(r.Max.X - n, r.Min.Y), image.Pt(r.Max.X, r.Min.Y + n)},
+		{image.Pt(r.Min.X, r.Max.Y), image.Pt(r.Min.X + n, r.Max.Y), image.Pt(r.Min.X, r.Max.Y - n)},
+		{r.Max, image.Pt(r.Max.X - n, r.Max.Y), image.Pt(r.Max.X, r.Max.Y - n)},
+	}
+	for _, c := range corners {
+		for o := 0; o <= 1; o++ {
+			ink.DrawLine(c[0].Add(image.Pt(0, o)), c[1].Add(image.Pt(0, o)), ink.DarkGray)
+			ink.DrawLine(c[0].Add(image.Pt(o, 0)), c[2].Add(image.Pt(o, 0)), ink.DarkGray)
+		}
+	}
+	f.Small.SetActive(ink.DarkGray)
+	ink.DrawString(image.Pt(r.Min.X+n/2, center(rect).Y-14), "S"+itoa(num))
+}
+
+// drawRobot draws a robot as a round token with a prominent heading nose and its
+// id — a shape deliberately distinct from the square checkpoint/gear boxes so a
+// robot never reads as a board element. Robot 1 (the human) is a solid black
+// token; the AI robots are white tokens with a thick ring and a distinct fill.
 func drawRobot(rect image.Rectangle, id int, facing game.Dir, alive, human bool, f *Fonts) {
-	body := pad(rect, rect.Dx()/6)
+	body := pad(rect, rect.Dx()/7)
 	if !alive {
-		// faint dashed outline for a destroyed robot awaiting respawn
-		ink.DrawRect(body, ink.DarkGray)
+		// faint hollow token for a destroyed robot awaiting respawn
+		fillDisc(body, ink.LightGray)
+		fillDisc(pad(body, body.Dx()/6), ink.White)
 		return
 	}
 	solid := id == 0
+	// The heading arrowhead protrudes past the token — drawn first so the token
+	// body sits on top of its base (a clean "piece with a pointed front").
+	fillNose(rect, body, facing)
 	if solid {
-		ink.FillArea(body, ink.Black)
+		fillDisc(body, ink.Black)
 	} else {
-		ink.FillArea(body, ink.White)
-		for o := 0; o <= 2; o++ {
-			ink.DrawRect(pad(body, o), ink.Black)
-		}
-		// distinct inner patterns per id
+		fillDisc(body, ink.Black)                     // ring
+		fillDisc(pad(body, body.Dx()/7+2), ink.White) // hollow centre
 		switch id {
 		case 2:
-			for x := body.Min.X; x < body.Max.X; x += 6 {
-				ink.DrawLine(image.Pt(x, body.Min.Y), image.Pt(x, body.Max.Y), ink.DarkGray)
+			for x := body.Min.X + 6; x < body.Max.X-4; x += 6 {
+				ink.DrawLine(image.Pt(x, body.Min.Y+body.Dy()/3), image.Pt(x, body.Max.Y-body.Dy()/3), ink.DarkGray)
 			}
 		case 3:
 			cx, cy := center(body).X, center(body).Y
-			ink.FillArea(image.Rect(cx-4, cy-4, cx+4, cy+4), ink.Black)
+			ink.FillArea(image.Rect(cx-5, cy-5, cx+5, cy+5), ink.Black)
 		}
 	}
-	// heading nose
-	var noseCol color.Color = ink.Black
-	if solid {
-		noseCol = ink.White
-	}
-	drawNose(body, facing, noseCol)
 	// id digit
 	f.Card.SetActive(idTextColor(solid))
 	lbl := itoa(id + 1)
@@ -530,6 +633,7 @@ var rulesParagraphs = []string{
 	"Registren körs ett i taget. Den robot som är närmast prioritetsantennen rör sig först. Robotar knuffar varandra — rakt ner i hål eller ut över kanten!",
 	"Efter varje register agerar brädet: transportband (dubbel pil = expressband, flyttar två) för dig, kugghjul vrider dig, vägglasrar och robotlasrar ger skada.",
 	"Faller du i ett hål eller ut över kanten återuppstår du vid din senaste kontrollpunkt med två skadepoäng. Mer skada = färre kort nästa runda.",
+	"På brädet: robotarna är runda pjäser med en nos som visar riktningen — du styr den fyllda pjäsen (1). Kontrollpunkter är numrerade rutor. Startrutor är markerade med hörn och S1–S4.",
 	"Tryck på ett handkort för att lägga det i nästa register. Tryck på ett register för att ta bort kortet. Tryck Kör när alla fem är fyllda.",
 }
 
