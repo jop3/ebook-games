@@ -1,0 +1,69 @@
+name: Build roborally.app (release only)
+
+# Builds the PocketBook ARM .app in the cloud using the PocketBook Go SDK Docker
+# image — but ONLY on demand, never on routine pushes, so the SDK container
+# isn't spun up on every commit. It runs when you:
+#   • publish a GitHub Release              (Releases → Draft a new release → Publish)
+#   • push a version tag  v* / roborally-v* (git tag v1.0.0 && git push origin v1.0.0)
+#   • click "Run workflow" on the Actions tab (workflow_dispatch)
+#
+# When triggered by a published Release, the built roborally.app is also attached
+# to that release as a downloadable asset. Otherwise grab it from the run's
+# "roborally-app" artifact. Then copy roborally.app into the device's
+# applications/ folder (see POCKETBOOK_GAMEDEV_GUIDE.md §7–§8).
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+      - 'roborally-v*'
+  workflow_dispatch:
+
+# Only one release build at a time; a newer trigger cancels an in-flight one.
+concurrency:
+  group: roborally-release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # attach the .app asset to a release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build roborally.app in the PocketBook Go SDK container
+        run: |
+          set -euxo pipefail
+          # The SDK image bundles the patched Go toolchain, libinkview and the
+          # arm-obreey clang cross-compiler. Mount only the roborally module.
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/roborally:/app" \
+            -w /app \
+            sunsung/pocketbook-go-sdk:latest \
+            build -o roborally.app .
+
+      - name: Verify it is an ARM binary
+        run: |
+          set -euxo pipefail
+          ls -la roborally/roborally.app
+          file roborally/roborally.app
+          file roborally/roborally.app | grep -q "ARM" \
+            || { echo "::error::roborally.app is not an ARM binary"; exit 1; }
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborally-app
+          path: roborally/roborally.app
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" roborally/roborally.app --clobber
