@@ -391,6 +391,19 @@ paths, string icons, name-matched). All 14 games have a splash + rules screen (�
 Mastermind includes the Knuth "device guesses your code" mode. Latest good view.json backup on
 device: `view.json.bak_final`. Builder for the whole view.json block: `scratchpad/vjfinal/main.go`.
 
+**Note (2026-07, remote build session):** this list only reflects the last physical-device sync
+and predates several modules already in the repo (roborally, akari, slitherlink, quarto,
+hashiwokakero, kakuro, nurikabe — each with its own splash/rules/play_test, just never folded into
+this paragraph). The repo's actual buildable roster is every top-level directory with a `go.mod`
+(`build.yml` discovers it automatically) — that's the source of truth for "what exists", not this
+paragraph. **2048** (`2048.app`) was added in this pass: `game/` unit tests, full play-test suite,
+splash/menu/rules, and an ARM `.app` build were all verified from a cloud session with no physical
+device or `D:` mount available — Docker (`sunsung/pocketbook-go-sdk:latest`) ran locally instead,
+confirmed against a known-good rebuild of `othello.app`. Icons (`2048.app.bmp`/`2048.bmp`/
+`2048_f.bmp`, 96x96, matching the roborally in-tree convention) are committed alongside the game,
+but **view.json registration and the on-device deploy step still require a session with the actual
+hardware** — nothing in this environment can perform that part.
+
 ## 10. Rules screen + splash screen — every game gets both (standard now)
 
 As of the 2026-07 pass, **all games have a splash screen (shown first) and a rules screen
