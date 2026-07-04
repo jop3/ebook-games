@@ -99,10 +99,9 @@ func DrawMenu(screen image.Point, f *Fonts, cfg config) ([]menuRow, image.Rectan
 	rows := []struct {
 		id, label string
 	}{
-		{"diff", "Bana: " + cfg.diff.String()},
+		{"bana", "Bana: " + banaLabel(cfg.courseSel)},
 		{"nai", "Motståndare: " + itoa(cfg.nAI)},
 		{"ai", "Dator: " + cfg.ai.String()},
-		{"course", "Kurs: " + courseLabel(cfg.random)},
 	}
 
 	margin := 70
@@ -136,11 +135,16 @@ func DrawMenu(screen image.Point, f *Fonts, cfg config) ([]menuRow, image.Rectan
 	return out, rulesBtn
 }
 
-func courseLabel(random bool) string {
-	if random {
-		return "Slump"
+// banaLabel names a course-selector value: the curated courses first, then the
+// three "Slump" (random) tiers.
+func banaLabel(sel int) string {
+	nc := game.NumCurated()
+	if sel < nc {
+		tiers := []string{"Lätt", "Mellan", "Svår"}
+		return itoa(sel+1) + " – " + tiers[int(game.CuratedTier(sel))]
 	}
-	return "Fast"
+	slump := []string{"Slump Lätt", "Slump Mellan", "Slump Svår"}
+	return slump[sel-nc]
 }
 
 // --- Board layout ----------------------------------------------------------

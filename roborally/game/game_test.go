@@ -244,6 +244,46 @@ func TestStartDocksHaveRoom(t *testing.T) {
 	}
 }
 
+// TestCuratedCoursesValid runs every hand-authored course through the same
+// checks as generated ones: well-formed, start-line contract, and solvable by
+// the Expert reference planner within its tier's round budget.
+func TestCuratedCoursesValid(t *testing.T) {
+	for i := 0; i < NumCurated(); i++ {
+		b := CuratedCourse(i)
+		if b.NCheck == 0 {
+			t.Fatalf("curated %d: no checkpoints", i)
+		}
+		if len(b.Docks) != 4 {
+			t.Fatalf("curated %d: want 4 docks, got %d", i, len(b.Docks))
+		}
+		if _, ok := b.CheckpointPos(1); !ok {
+			t.Fatalf("curated %d: missing checkpoint 1", i)
+		}
+		// every checkpoint ordinal 1..NCheck present
+		for ord := uint8(1); ord <= b.NCheck; ord++ {
+			if _, ok := b.CheckpointPos(ord); !ok {
+				t.Fatalf("curated %d: missing checkpoint %d", i, ord)
+			}
+		}
+		// start-line contract
+		for _, d := range b.Docks {
+			if b.wallBetween(d.Pos, d.Facing) || b.lethal(d.Pos.Add(d.Facing.Step())) {
+				t.Fatalf("curated %d: blocked launch at dock %v", i, d.Pos)
+			}
+		}
+		for a := range b.Docks {
+			for c := a + 1; c < len(b.Docks); c++ {
+				if manhattan(b.Docks[a].Pos, b.Docks[c].Pos) < 2 {
+					t.Fatalf("curated %d: adjacent docks %v %v", i, b.Docks[a].Pos, b.Docks[c].Pos)
+				}
+			}
+		}
+		if _, ok := solveReference(b, budgetFor(CuratedTier(i))); !ok {
+			t.Fatalf("curated %d (%v): reference planner could not finish", i, CuratedTier(i))
+		}
+	}
+}
+
 func TestExpertReachesCheckpoints(t *testing.T) {
 	b := GenerateCourse(DiffMedium, 5)
 	rounds, ok := solveReference(b, budgetFor(DiffMedium))

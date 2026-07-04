@@ -134,15 +134,15 @@ func TestPlayProgramGuards(t *testing.T) {
 func TestPlayMenuCyclesAndQuit(t *testing.T) {
 	a, h := boot(t)
 
-	// Cycle course difficulty through all three and back.
-	first := a.cfg.diff
+	// Cycle the course selector.
+	first := a.cfg.courseSel
 	for _, row := range a.menuRows {
-		if row.id == "diff" {
+		if row.id == "bana" {
 			h.TapRect(row.rect)
 		}
 	}
-	if a.cfg.diff == first {
-		t.Fatal("tapping Bana should change difficulty")
+	if a.cfg.courseSel == first {
+		t.Fatal("tapping Bana should change the selected course")
 	}
 	// Cycle opponent count.
 	nBefore := a.cfg.nAI
@@ -170,14 +170,14 @@ func TestPlayMenuCyclesAndQuit(t *testing.T) {
 	}
 }
 
-// TestPlayAllDifficulties boots each course difficulty and plays a few rounds to
-// make sure every board renders and resolves without stalling.
-func TestPlayAllDifficulties(t *testing.T) {
-	for diff := 0; diff < 3; diff++ {
+// TestPlayAllCourses boots each curated course (and one random tier) and plays a
+// few rounds to make sure every board renders and resolves without stalling.
+func TestPlayAllCourses(t *testing.T) {
+	for sel := 0; sel < courseCount(); sel++ {
 		a, h := boot(t)
 		for _, row := range a.menuRows {
-			if row.id == "diff" {
-				for int(a.cfg.diff) != diff {
+			if row.id == "bana" {
+				for a.cfg.courseSel != sel {
 					h.TapRect(row.rect)
 				}
 			}
@@ -192,7 +192,7 @@ func TestPlayAllDifficulties(t *testing.T) {
 			}
 		}
 		if a.gs.Round < 1 {
-			t.Fatalf("diff %d: game did not progress", diff)
+			t.Fatalf("course %d: game did not progress", sel)
 		}
 	}
 }
@@ -218,7 +218,15 @@ func TestPlayScreens(t *testing.T) {
 	h.Screenshot(dir + "/03_rules.png")
 	h.Back() // -> menu
 
-	// Use 3 AI opponents so all four robot emblems appear on the board.
+	// Select Bana 3 (Svår) and 3 AI opponents for a rich showcase board with all
+	// four robot emblems.
+	for _, row := range a.menuRows {
+		if row.id == "bana" {
+			for a.cfg.courseSel != 2 {
+				h.TapRect(row.rect)
+			}
+		}
+	}
 	for _, row := range a.menuRows {
 		if row.id == "nai" {
 			for a.cfg.nAI != 3 {
@@ -226,7 +234,7 @@ func TestPlayScreens(t *testing.T) {
 			}
 		}
 	}
-	// Program screen (empty then full) on the default Mellan course.
+	// Program screen (empty then full).
 	startGameVia(t, a, h)
 	h.Screenshot(dir + "/04_program_empty.png")
 	for i := range a.handRects {

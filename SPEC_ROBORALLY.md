@@ -322,9 +322,33 @@ This is enforced by `placeBottomDocks` (generator), the `NewGame` dock shuffle, 
 non-lethal, unwalled tile in front of each dock, and no two docks adjacent). **Keep this invariant
 when adding new tile types, larger boards, or hand-authored courses.**
 
-Fixed courses live as literal tile arrays in `game/courses.go` (compact rune-map + a decoder, e.g.
-`.` floor, `>` belt-east, `»` express-east, `O` pit, `+` repair, `1` checkpoint-1, `#`+edge for
-walls, `L^` laser-north, `A` antenna, `a` dock). The same decoder can load emulator test fixtures.
+### Curated vs. generated — the shipped decision (curated-primary)
+Unlike the library's *puzzle* games (sudoku/nonogram/akari), where a generator fully captures
+quality, Robo Rally is a spatial **strategy/race** game whose fun comes from *intentional* design —
+a pit at the exit of a fast belt is a trap; the same pit placed randomly is noise. The generator can
+verify a board is solvable, non-trivial and fair, but it can't measure *interestingness*. So the
+shipped model is **curated-primary, generator-as-bonus**:
+
+- **Curated courses (the main experience):** hand-authored in `game/courses.go` as rune-map string
+  grids (`bana1/2/3`), one per tier, each with a **signature mechanic** — Bana 1 (Lätt) a belt
+  shortcut you branch off to tag a checkpoint; Bana 2 (Mellan) a laser gauntlet across the middle
+  plus an express-belt shortcut; Bana 3 (Svår) converging belts into a gear-guarded checkpoint with
+  double-barrel laser crossfire and pit-flanked goals. Decoded by `DecodeBoard`; edge/attribute
+  detail (express, walls, lasers) applied by a per-course `overlay` func via `setExpress/addWall/
+  addLaser`.
+- **Generator = "Slumpbana":** the same `GenerateCourse` lives on as three endless random tiers for
+  replayability.
+- **Same verifier for both:** `TestCuratedCoursesValid` runs every authored board through the exact
+  checks a generated one passes — well-formed, the Start-line contract, and Expert-solvable within
+  the tier's round budget — so a hand-made course can never ship broken.
+- **Menu:** one "Bana" selector cycles `Bana 1/2/3` then `Slump Lätt/Mellan/Svår`.
+- **Growth path:** use the generator as an idea machine — generate a batch, screenshot, promote the
+  best into hand-tuned curated boards. Add new courses by appending to `curatedCourses`; the
+  validity test guards them.
+
+**Rune map** (`DecodeBoard`): `.`/space floor, `^>v<` single belts, `R`/`L` gear CW/CCW, `O` pit,
+`+` repair, `1`..`9` checkpoint, `A` antenna, `a`..`h` start dock (faces North). The same decoder
+loads emulator/test fixtures.
 
 ### 5a. Difficulty progression & element budget (how conveyors/traps/lasers scale)
 Difficulty is driven by **which elements appear, how densely, and how adversarially they're placed** —

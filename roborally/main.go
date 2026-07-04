@@ -31,13 +31,17 @@ const (
 	screenRules
 )
 
-// config holds the menu selections for the next game.
+// config holds the menu selections for the next game. courseSel indexes the
+// combined course list: 0..NumCurated-1 are the hand-authored "Bana N", and the
+// three after that are "Slump" at each difficulty tier.
 type config struct {
-	diff    game.CourseDiff
-	nAI     int
-	ai      game.AILevel
-	random  bool // Slumpbana vs. a fixed named course
+	courseSel int
+	nAI       int
+	ai        game.AILevel
 }
+
+// courseCount is the total number of selectable courses (curated + 3 random).
+func courseCount() int { return game.NumCurated() + 3 }
 
 type app struct {
 	fonts  *Fonts
@@ -74,7 +78,7 @@ func main() {
 func (a *app) Init() error {
 	a.fonts = InitFonts()
 	a.screen = screenSplash
-	a.cfg = config{diff: game.DiffMedium, nAI: 2, ai: game.AIMedium, random: false}
+	a.cfg = config{courseSel: 0, nAI: 2, ai: game.AIMedium}
 	a.seed = 1
 	ink.Repaint()
 	return nil
@@ -190,8 +194,8 @@ func (a *app) tapMenu(p image.Point) bool {
 // applyMenu cycles a setting or starts the game.
 func (a *app) applyMenu(id string) {
 	switch id {
-	case "diff":
-		a.cfg.diff = game.CourseDiff((int(a.cfg.diff) + 1) % 3)
+	case "bana":
+		a.cfg.courseSel = (a.cfg.courseSel + 1) % courseCount()
 	case "nai":
 		a.cfg.nAI++
 		if a.cfg.nAI > 3 {
@@ -199,8 +203,6 @@ func (a *app) applyMenu(id string) {
 		}
 	case "ai":
 		a.cfg.ai = game.AILevel((int(a.cfg.ai) + 1) % 3)
-	case "course":
-		a.cfg.random = !a.cfg.random
 	case "start":
 		a.startGame()
 	}
@@ -208,11 +210,12 @@ func (a *app) applyMenu(id string) {
 
 func (a *app) startGame() {
 	var board *game.Board
-	if a.cfg.random {
-		a.seed++
-		board = game.GenerateCourse(a.cfg.diff, a.seed*2654435761)
+	if a.cfg.courseSel < game.NumCurated() {
+		board = game.CuratedCourse(a.cfg.courseSel)
 	} else {
-		board = game.FixedCourse(a.cfg.diff)
+		diff := game.CourseDiff(a.cfg.courseSel - game.NumCurated())
+		a.seed++
+		board = game.GenerateCourse(diff, a.seed*2654435761)
 	}
 	a.gs = game.NewGame(board, a.cfg.nAI, a.cfg.ai, a.seed*97+13)
 	a.screen = screenProgram
