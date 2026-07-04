@@ -1,5 +1,12 @@
 # Build spec — Robo Rally (simplified, solo vs. AI) for PocketBook Verse Pro
 
+> **Status: implemented** in `roborally/`. Pure logic + generator + blind AI in
+> `roborally/game/` (unit-tested via `go test ./game/`), UI in `main.go`/`ui.go`/
+> `screens.go`, play suite in `play_test.go` (`playtest/play.sh roborally`), ARM
+> `.app` builds via the SDK Docker image. This spec is the design of record; a few
+> v1 details were simplified further during the build (noted inline where relevant).
+
+
 Hand-off spec for a **simplified Robo Rally** port: **1 human vs. 1–3 AI robots**, race to touch
 checkpoints in order across a hazard-filled factory floor. Programming is secret and simultaneous;
 resolution is register-by-register and fully deterministic. This design leans *into* what e-ink is

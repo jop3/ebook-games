@@ -33,6 +33,7 @@ before starting a new game.
 | [hashiwokakero](hashiwokakero/) | Hashiwokakero (bridges) |
 | [kakuro](kakuro/) | Kakuro |
 | [nurikabe](nurikabe/) | Nurikabe |
+| [roborally](roborally/) | Robo Rally (simplified — 1 human vs 1–3 AI robots; program registers, race the checkpoints) |
 | [screentest](screentest/) | Diagnostic app for screen/input debugging |
 
 ## Other apps
