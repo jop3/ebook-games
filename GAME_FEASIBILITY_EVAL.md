@@ -13,6 +13,7 @@ grades a **new** shortlist and recommends what to build.
 | **Sushi Go** | ★★★★☆ | Medium | ✅ **Build** — the library's first *card/drafting* game; good genre gap-fill |
 | **Go** | ★★★★☆ (2P) | Medium (+High for AI) | ✅ **Build 2-player / 9×9**; ship a weak 9×9 AI, don't promise a strong one |
 | **2048** | ★★★★☆ | **Low** | ✅ **Build** — trivial logic, no AI, number-based (greyscale-perfect); animation is cosmetic so e-ink is fine |
+| **Six** | ★★★★☆ | Medium–High | ✅ **Build** — great e-ink fundamentals; the *unbounded growing board* is the one real challenge → do a bounded-board v1 |
 | **Shong** | ★★★★★ | Low–Medium | ✅ **Build** — chess-like on a tiny 4×6 board; distinct shapes, and the small board makes a *strong* AI easy |
 | **Donuts** ("Insert") | ★★★★☆ | Medium | ✅ **Build** — genuinely novel 2-player abstract (direction-forcing + custodial capture + connect-5) |
 | **Desdemona** | ★★☆☆☆ | Low | ❌ **Skip as standalone** — its most-popular form is just renamed Reversi (= our Othello). Add an Othello *variant mode* instead |
@@ -184,6 +185,32 @@ one game, not two.)*
 
 ---
 
+### Six — hexagonal tile-placement abstract  *(Steffen Spiele)*
+21 hex tiles per player, placed to always form one connected cluster (no fixed board — the field
+*grows*); win by arranging **6 of your tiles** into a **line, triangle, or hexagon-ring**. After all
+tiles are placed, a movement phase lets you relocate tiles; an advanced rule removes tiles stranded
+when a move splits the cluster (win also by reducing the opponent to ≤5).
+
+- **e-ink fundamentals — all good:** greyscale works (black vs outline/hatched hexes), tap works
+  (tap a frontier position), turn-based, **no required animation**. None of the hard disqualifiers.
+- **The one real challenge — the unbounded board:** every existing game here has a *fixed* board;
+  Six's cluster grows and drifts, needing an **auto-fit camera** (recompute hex extent + rescale
+  each move), and up to **42 tiles** get small late-game on a 1072-wide screen.
+- **Win-shape detection:** three templates (line / triangle / hexagon-ring) across all orientations
+  on hex coords — moderate, pure-Go, unit-testable.
+- **AI:** YINSH-tier hard (there's an academic **MCTS thesis** on Six). Ship a **modest heuristic**
+  AI (extend your near-complete shapes, block the opponent's) + hot-seat; don't promise strong.
+- **Connectivity:** the movement phase + split-removal need flood-fill (done before in `nurikabe`,
+  `hashiwokakero`).
+- **De-risk v1:** build on a **bounded large hex board** (fixed radius ~5–6) instead of a true
+  unbounded surface — sidesteps the camera, keeps the game essentially intact, drops High→Medium.
+- **Reuse:** `hex` (hex-grid render + coords), `nurikabe`/`hashiwokakero` (flood-fill), `othello` AI.
+- **Verdict:** ✅ **Build** — distinctive, nothing like it in the library, good e-ink fit on the
+  fundamentals. Effort is **Medium–High** (roughly YINSH-tier); the bounded-board v1 is the smart
+  path. Full spec in `SPEC_BUILD_GAMES.md`.
+
+---
+
 ## ❌ Skip as a standalone — Desdemona
 
 Researched the name to pick "the most popular ruleset": there **isn't a single famous distinctive
@@ -252,7 +279,8 @@ get a *strong* AI cheaply; YINSH and Go carry AI risk and go later.
 5. **Sushi Go** — first card game; broadens the library's genre mix.
 6. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
 7. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
-8. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
+8. **Six** — distinctive hex tile-placement; bounded-board v1 (YINSH-tier effort; camera is the risk).
+9. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
    worthwhile substitute for a standalone Desdemona.
 
 Every build still follows the standard §0 setup + splash/rules screens + `play_test.go` from

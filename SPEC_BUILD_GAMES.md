@@ -10,6 +10,7 @@ small Othello variant-mode appendix. Build order (low-risk first):
 5. **Sushi** (Sushi Go) — the library's first card/drafting game
 6. **Ringar** (YINSH) — deep abstract; ring/marker flipping
 7. **Go** — iconic; 2-player primary, weak 9×9 AI optional
+8. **Six** (Sex) — hex tile-placement; bounded-board v1 (see GAME 8)
 
 Every game follows the **same non-negotiable setup + splash/rules requirements as
 `SPEC_NEXT_GAMES.md` §0 and `POCKETBOOK_GAMEDEV_GUIDE.md`** — read those first. The per-game
@@ -543,6 +544,102 @@ up toward the 2048 tile and a high score. A single-player, untimed score-chaser.
 
 ---
 
+## GAME 8 — Six (working title "Sex")
+
+**Elevator pitch:** place your hexagonal tiles edge-to-edge into a growing mosaic and be the first
+to arrange **six** of your own tiles into a **line, a triangle, or a hexagon-ring**.
+
+*Baserat på Six (Steffen Spiele, Steffen Mühlhäuser) — reimplement with original art + a neutral
+Swedish title. NOTE: "Sex" is the Swedish word for six but is an awkward app name — consider
+"Hexa", "Sexhörning", or "Sex i rad"-style instead; pick before shipping.*
+
+### Rules (Swedish on the rules screen)
+- Two players, **21 hex tiles each** (one colour per player). No board — tiles form a single
+  connected cluster on an (in the original) unbounded surface.
+- **Placement phase:** on your turn place one tile from your supply so it is **edge-adjacent to at
+  least one tile already on the table** (the whole cluster must stay connected). First player's
+  first tile starts the cluster.
+- **Winning shapes** — six of *your* tiles forming any one of:
+  - **Linje:** six in a straight line (one of the 3 hex axes).
+  - **Triangel:** a size-3 triangle (rows of 3 + 2 + 1).
+  - **Hexagon (ring):** six tiles surrounding one central cell (the centre may be empty or any
+    colour).
+- **Movement phase:** if all 42 tiles are placed with no winner, players alternate **moving** one
+  of their own already-placed tiles to another edge-adjacent empty position (cluster must stay
+  connected), until someone forms a shape.
+- **Advanced rule (optional toggle):** a move **may** disconnect the cluster; any group **not**
+  containing the moved tile is **removed from the game**. A player reduced to **≤5 tiles** can no
+  longer make a shape and **loses**. (v1 may ship without this; add as "Avancerat".)
+
+### Board model decision — **do a bounded v1**
+The original is unbounded. Rather than build a rescaling auto-fit camera (real work, and 42 tiles
+get tiny), **v1 uses a fixed large hexagonal board of radius ~5–6** (a `hex`-style field big enough
+that games effectively never hit the edge). This keeps every existing pattern (fixed coords, fixed
+tile size, tap a cell) and removes the only hard piece. A true unbounded + auto-fit camera is a
+**v2** upgrade, not a launch requirement — note it in the menu if the board edge is ever reached.
+
+### game/ model + logic (ink-free, unit-tested)
+- **Axial hex coords** (reuse/extend the `hex` coord model). `tiles map[Hex]Side`; per-player
+  remaining supply counts. Bounded set = all hexes within radius R of centre.
+- `PlaceMoves(state, side) []Hex`: empty in-board hexes **adjacent to the current cluster** (or the
+  whole board when empty). `MoveMoves(state, side) []Move`: for each own tile, the frontier empties,
+  **excluding moves that would disconnect** the cluster (flood-fill check) unless the advanced rule
+  is on (then compute stranded groups to remove).
+- `Connected(tiles) bool` and `Components(tiles) [][]Hex` via flood-fill (reuse `nurikabe`/
+  `hashiwokakero` union-find/flood patterns).
+- **Win detection** `HasShape(tiles, side) bool` — the core logic:
+  - *Linje:* for each of your tiles, walk each of the 3 axes; a run of 6 same-side wins.
+  - *Triangel:* enumerate the size-3 triangle template (6 cells) at every anchor in **all 6
+    orientations**; win if all 6 are your side.
+  - *Hexagon-ring:* for every hex `c`, the 6 neighbours of `c` all your side ⇒ win (centre ignored).
+  - Represent each template as offset sets on axial coords; rotate by the 6 hex rotations. Unit-test
+    each shape (incl. a near-miss of 5).
+- `Winner(state, advanced)`: shape found ⇒ that side; advanced ⇒ a side with ≤5 tiles loses.
+
+### AI
+- `BestMove` heuristic minimax over `PlaceMoves`/`MoveMoves` (the frontier keeps the branching
+  bounded, but it's still wide — **prune to frontier cells near existing tiles**). Eval = your best
+  shape *progress* (max tiles toward any single line/triangle/ring, weighted by how few cells
+  remain) − opponent's, + a **block** term for the opponent's 5/6-complete shapes. Depth Lätt 1 /
+  Medel 2 / Svår 3.
+- **Be honest in the menu:** the AI is a **casual** opponent (Six has real depth — there's a
+  published MCTS thesis on it). Hot-seat 2-player is the primary experience; a stronger (MCTS) AI is
+  a future upgrade, same stance as YINSH/Hex.
+
+### UI
+- Fixed radius-R hex field rendered like `hex`; tiles = **solid black hex** (you) vs
+  **outline/hatched hex** (opponent) — greyscale-clean, two clearly distinct fills.
+- Tap flow: **placement** — tap a highlighted frontier cell (draw the legal frontier as faint
+  ghosts) to place your next tile. **Movement phase** — tap your tile (highlight its legal
+  destinations), tap a destination. Show each side's remaining-tile count and phase.
+- When a winning shape completes, **highlight the six tiles** and show the banner.
+- Menu: 2 spelare / Mot dator (Lätt/Medel/Svår), Standard/Avancerat toggle, "Regler". "Ny", "Meny".
+- **Splash motif:** the three winning shapes in miniature — a line of 6, a triangle of 6, and a
+  hexagon-ring of 6 — in solid hexes.
+
+### Gotchas
+- **Connectivity must hold every turn** (place adjacent; a move may not disconnect unless advanced).
+  Unit-test both the placement-adjacency rule and the move-disconnect rejection.
+- **Shape detection across all orientations** is the bug-prone part — the triangle has 6 rotations;
+  the ring is 6-neighbours-of-a-centre. Test each shape at multiple positions/orientations and a
+  5-tile near-miss that must **not** win.
+- The **hexagon-ring centre is irrelevant** (empty or either colour) — only the 6 ring cells matter.
+- Advanced-rule split: after a disconnecting move, keep only the component with the **moved** tile;
+  remove the rest and re-check the ≤5 loss for the owner of removed tiles. Test a deliberate split.
+- Late-game density: even bounded, 42 tiles on radius-6 is busy — verify legibility in the emulator
+  at a near-full board before committing the radius.
+
+### Definition of done
+- [ ] `game/` unit tests: placement adjacency + connectivity; move legality (disconnect rejection /
+      advanced split-removal); all three winning shapes across orientations + a 5-tile near-miss;
+      ≤5-tile loss (advanced); `Winner`.
+- [ ] AI plays full legal games (both phases) vs itself/human in `play_test.go`; a shape win reached.
+- [ ] Splash + rules (Swedish) + menu (opponent / Standard-Avancerat / Regler); emulator-clean at a
+      near-full board (tile legibility checked).
+- [ ] ARM `.app` (neutral name, e.g. `hexa.app`), icon + `_f`, view.json @Games.
+
+---
+
 ## Appendix — Anti-Othello variant mode (not a new app)
 
 The recommended substitute for a standalone "Desdemona" (see `GAME_FEASIBILITY_EVAL.md`): add a
@@ -559,8 +656,9 @@ The recommended substitute for a standalone "Desdemona" (see `GAME_FEASIBILITY_E
 
 ## Cross-game build order & shared checklist
 Build in the **risk-ascending order from the top of this doc** (2048 → Hasami → Shong → Munkar →
-Sushi → Ringar → Go), not the GAME-section numbers (2048 is specced last as GAME 7 but built
-first). For **every** game, the definition-of-done above plus
+Sushi → Ringar → Go → Six), not the GAME-section numbers (2048 and Six are specced last as GAME 7
+and GAME 8 but sit at the ends of the effort range). For **every** game, the definition-of-done
+above plus
 the universal gates from `SPEC_NEXT_GAMES.md` §"Definition of done": pure `game/` logic with tests,
 splash+rules (Swedish), menu with mode/difficulty + "Regler", all screens emulator-verified at worst
 case, ARM `.app` under a clean name with an 8-bit icon (+`_f`) registered in `view.json` @Games,
