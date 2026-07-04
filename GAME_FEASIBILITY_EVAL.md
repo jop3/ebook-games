@@ -14,6 +14,7 @@ grades a **new** shortlist and recommends what to build.
 | **Go** | ★★★★☆ (2P) | Medium (+High for AI) | ✅ **Build 2-player / 9×9**; ship a weak 9×9 AI, don't promise a strong one |
 | **2048** | ★★★★☆ | **Low** | ✅ **Build** — trivial logic, no AI, number-based (greyscale-perfect); animation is cosmetic so e-ink is fine |
 | **Six** | ★★★★☆ | Medium–High | ✅ **Build** — great e-ink fundamentals; the *unbounded growing board* is the one real challenge → do a bounded-board v1 |
+| **Azul** (simplified) | ★★★★☆ | Medium | ✅ **Build 2-player** — perfect-info so hot-seat *and* AI are clean; UI density is the real risk, so keep it 2p |
 | **Shong** | ★★★★★ | Low–Medium | ✅ **Build** — chess-like on a tiny 4×6 board; distinct shapes, and the small board makes a *strong* AI easy |
 | **Donuts** ("Insert") | ★★★★☆ | Medium | ✅ **Build** — genuinely novel 2-player abstract (direction-forcing + custodial capture + connect-5) |
 | **Desdemona** | ★★☆☆☆ | Low | ❌ **Skip as standalone** — its most-popular form is just renamed Reversi (= our Othello). Add an Othello *variant mode* instead |
@@ -211,6 +212,33 @@ when a move splits the cluster (win also by reducing the opponent to ≤5).
 
 ---
 
+### Azul (simplified) — tile-drafting + pattern-building
+Draft all tiles of one colour from a factory, stage them on a pattern line, then tile them onto
+your 5×5 wall for adjacency points; floor line penalises overflow; end-game bonuses for full
+rows/columns/colours. **Build the 2-player base game.**
+
+- **e-ink fundamentals — good:** turn-based, no animation, tap input (tap factory+colour → tap
+  pattern line). Fits the device.
+- **Perfect information** (all boards + factories open) — the standout: unlike Sushi Go's hidden
+  hands, Azul plays natively as **hot-seat 2-player**, *and* a perfect-info optimisation game is
+  very AI-friendly (greedy + shallow lookahead).
+- **Colour → 5 greyscale patterns**, the same mapping the library already uses (Sushi, Quarto).
+  Five legible tile patterns at tile size = the bounded art task.
+- **The real risk is UI density:** 5 factories + centre + *two* player boards (pattern lines + 5×5
+  wall + floor) is the busiest layout in the library on a portrait greyscale screen. **Mitigation =
+  keep it 2-player**, show the active board full-size and the opponent as a compact summary/toggle.
+- **Simplify by scope, not rules:** 2-player only; keep the iconic 5×5 wall + 5 factories + centre
+  and the scoring/floor/bonuses (cheap to compute, they're the game's soul). A smaller "mini" wall
+  is a fallback *only* if the screen proves too tight.
+- **Logic:** moderate but very unit-testable (drafting, pattern-line legality, wall adjacency
+  scoring, floor penalties, end bonuses) — more moving parts than most, all pure-Go.
+- **Reuse:** `sushi`/`quarto` (tile patterns + score screens), `othello` AI scaffolding.
+- **Verdict:** ✅ **Build (2-player).** A second modern-boardgame port alongside Sushi that also
+  fills the *perfect-info hot-seat euro* niche. **Medium effort**, UI layout being the headline.
+  Full spec in `SPEC_BUILD_GAMES.md`.
+
+---
+
 ## ❌ Skip as a standalone — Desdemona
 
 Researched the name to pick "the most popular ruleset": there **isn't a single famous distinctive
@@ -277,10 +305,11 @@ get a *strong* AI cheaply; YINSH and Go carry AI risk and go later.
 3. **Shong** — tiny 4×6 board → strong AI is trivial; distinct chess-like duel; reuses `irad`'s △□X.
 4. **Donuts** — novel direction-forcing + custodial capture; forks `othello`'s flip/AI.
 5. **Sushi Go** — first card game; broadens the library's genre mix.
-6. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
-7. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
-8. **Six** — distinctive hex tile-placement; bounded-board v1 (YINSH-tier effort; camera is the risk).
-9. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
+6. **Azul** (2-player) — perfect-info euro; medium logic, UI density is the work.
+7. **YINSH** — highest-value new strategy title; ideal e-ink visuals (budget for AI tuning).
+8. **Go** (2-player + 9×9) — iconic, perfect greyscale fit; weak AI optional.
+9. **Six** — distinctive hex tile-placement; bounded-board v1 (YINSH-tier effort; camera is the risk).
+10. *(near-zero-cost extra)* an **"Anti-Othello" variant mode** on the existing `othello` — the
    worthwhile substitute for a standalone Desdemona.
 
 Every build still follows the standard §0 setup + splash/rules screens + `play_test.go` from

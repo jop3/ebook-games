@@ -11,6 +11,7 @@ small Othello variant-mode appendix. Build order (low-risk first):
 6. **Ringar** (YINSH) — deep abstract; ring/marker flipping
 7. **Go** — iconic; 2-player primary, weak 9×9 AI optional
 8. **Six** (Sex) — hex tile-placement; bounded-board v1 (see GAME 8)
+9. **Mosaik** (Azul, simplified 2-player) — tile-drafting + pattern-building (see GAME 9)
 
 Every game follows the **same non-negotiable setup + splash/rules requirements as
 `SPEC_NEXT_GAMES.md` §0 and `POCKETBOOK_GAMEDEV_GUIDE.md`** — read those first. The per-game
@@ -640,6 +641,114 @@ tile size, tap a cell) and removes the only hard piece. A true unbounded + auto-
 
 ---
 
+## GAME 9 — Mosaik (Azul, simplified 2-player)
+
+**Elevator pitch:** draft coloured tiles from the factories, stage them on your pattern lines, then
+lay them into your wall for points — but every tile that overflows costs you. Highest score after
+someone completes a full row wins.
+
+*Baserat på Azul (Michael Kiesling, Next Move/Plan B) — reimplement rules with original greyscale
+art + a neutral name ("Mosaik"). Ship the **2-player** base game (simplification = scope, not
+rules).*
+
+### Rules (Swedish on the rules screen)
+- **2 players.** 100 tiles in **5 patterns** (call them "färger" but render as distinct greyscale
+  patterns), 20 each, in a bag. **5 factory displays** + a central pool. Each player has a board:
+  **5 pattern lines** (row *i* holds *i* tiles, i=1..5), a **5×5 wall** with a fixed pattern layout
+  (each colour appears once per row/column, diagonal-shifted), and a **floor line** (7 penalty
+  slots).
+- **Round — drafting:** fill each factory with 4 random tiles. On your turn, take **all tiles of one
+  colour** from **one factory** (the factory's other tiles go to the centre), **or** all tiles of
+  one colour from the **centre**. The first player to take from the centre each round takes the
+  **startspelare** marker (→ goes first next round) and places it on their floor line (a penalty).
+- **Placing:** put the taken tiles on **one** pattern line whose: (a) tiles are all the same colour,
+  and (b) the wall cell for that colour in that row is **not already filled**. Tiles that don't fit
+  (line full, or you chose the floor) go to the **floor line**. A pattern line may only ever hold
+  one colour.
+- **Wall-tiling (end of round, when factories + centre are empty):** for each **complete** pattern
+  line, move one tile to its wall row (in that colour's column) and **score it**; discard the rest
+  of that line. Incomplete lines stay for next round.
+- **Scoring a placed wall tile:** if it has no orthogonal neighbour → **1**. Otherwise it scores the
+  length of its connected **horizontal** run **plus** its connected **vertical** run (each including
+  the new tile; a run of 1 in a direction with no neighbour contributes nothing extra). Sum over all
+  tiles placed this round.
+- **Floor line penalties:** the 7 slots deduct **−1, −1, −2, −2, −2, −3, −3** (cumulative for tiles
+  sitting there this round); clear the floor each round. Score can't go below 0.
+- **Game end:** triggers at the end of the round in which any player completes a **full horizontal
+  row of 5** on their wall. Then **bonuses:** **+2** per complete row, **+7** per complete column,
+  **+10** per colour with all 5 on the wall. Highest total wins (tie → most complete rows, then
+  share).
+
+### game/ model + logic (ink-free, unit-tested)
+- `type Color uint8` (0..4); `Bag []Color`; `Factory [4]Color` (variable fill); `Center []Color` +
+  `centerHasStart bool`.
+- `type Board struct { Lines [5][]Color; wall [5][5]bool; Floor []Color; Score int }`. The wall's
+  fixed colour→column map per row is a constant table `wallCol[row][color]`.
+- Move gen: `LegalMoves(state, side) []Move` where `Move{Source (factoryIdx|-1 for centre), Color,
+  TargetLine (0..4 | -1 for floor)}` — respect the pattern-line legality (same colour, wall cell
+  empty, room). `Apply(state, m)` moves tiles, routes overflow to floor, handles the start marker.
+- `Draft`/round engine: refill factories from bag (reshuffle discards when the bag empties), detect
+  round end (all factories + centre empty), run wall-tiling + scoring, pass the start marker.
+- **Pure scoring functions**, each unit-tested independently: `scorePlacement(wall, r, c) int`
+  (H-run + V-run), `floorPenalty(n) int`, `endBonuses(wall) int` (rows/cols/colours),
+  `gameOver(wall) bool`.
+
+### AI (perfect information — friendly to search)
+- `BestMove(state, side, diff)`: Azul is fully open, so a **greedy + shallow lookahead** heuristic
+  plays well. Eval of a candidate move = immediate wall-score gain (if it completes a line now/next
+  tiling) + progress toward row/column/colour bonuses − floor penalty incurred − a **denial** term
+  (does it leave the opponent an obvious big scoring take?). Lätt = pure greedy; Medel/Svår = 1–2
+  ply lookahead over the (small) move set. Reuse `othello`'s `aiPend` after-paint pattern.
+- Because it's perfect-info, **hot-seat 2-player is first-class** — the AI is an add-on, not a
+  requirement to make the game playable (contrast Sushi's hidden hands).
+
+### UI (the densest layout in the library — design carefully)
+Portrait 1072×**1340**. Suggested vertical bands:
+- **Top:** the 5 factories (each 4 tiles in a 2×2) + the centre pool. Compact tile chips.
+- **Middle:** the **active player's** board full-size — pattern lines (left, right-aligned so the
+  wall-adjacent end is clear), the 5×5 wall (right, empty cells showing their faint target pattern),
+  the floor line below. Scores for both players always visible.
+- **Bottom:** the **opponent's** board as a **compact** wall+lines summary, with a "Visa
+  motståndare" toggle to see it full-size (it's open info, so no secrecy needed).
+- **Tile art = 5 distinct greyscale patterns** (e.g. solid, ring, cross-hatch, diagonal stripes,
+  dotted) legible at chip size — prototype in the emulator early (this is the main art task; the
+  same discipline as Quarto's attribute glyphs and Sushi's icons).
+- **Tap flow:** tap a factory (or centre) → its tiles highlight; tap the **colour** you want → that
+  colour's tiles are "in hand"; tap a **legal pattern line** (or the floor) to place. Illegal
+  targets greyed/rejected with a hint. A confirm step avoids mis-taps.
+- Round-end **wall-tiling** shown as the board updating with the per-tile points; end-game **bonus
+  screen** then the winner banner.
+- Menu: 2 spelare / Mot dator (Lätt/Medel/Svår), "Regler". "Ny", "Meny".
+- **Splash motif:** a 5×5 wall partly filled with the five distinct tile patterns + one complete
+  scoring row highlighted.
+
+### Gotchas
+- **Pattern-line legality** has three parts (same colour; wall cell for that colour+row still empty;
+  spare tiles overflow to floor) — unit-test each rejection.
+- **Adjacency scoring** is the classic bug: an isolated tile = 1 (not 2); a tile with both H and V
+  neighbours scores both runs; a lone tile in one axis adds only the other axis's run. Test a cross,
+  an L, a full row, a full column against hand-computed values.
+- **Overflow + start marker** both land on the floor and both penalise — test the −1/−1/−2/−2/−2/
+  −3/−3 track and the "score never below 0" clamp.
+- **Bag exhaustion:** reshuffle the discard (lid) into the bag mid-round; test the empty-bag path.
+- **Round vs game end:** the full-row trigger ends the game *after finishing that round's tiling*,
+  not instantly — test it, and apply end bonuses exactly once.
+- **UI density is the headline risk** — build the layout in the emulator at a near-full board with
+  both boards visible **before** wiring logic; if it's too cramped, fall back to a smaller wall
+  variant rather than shrinking tiles below legibility.
+
+### Definition of done
+- [ ] `game/` unit tests: draft/overflow/start-marker; pattern-line legality; wall adjacency
+      scoring (cross/L/row/column vs independent scorer); floor penalties + 0-clamp; end bonuses
+      (rows/cols/colours); round-end tiling and game-end trigger; bag reshuffle.
+- [ ] AI plays a full legal 2-player game in `play_test.go`; hot-seat 2-player game also driven to a
+      final score + bonus banner through the real tap UI.
+- [ ] Splash + rules (Swedish) + menu + wall-tiling + bonus/score screens; **emulator-verified at a
+      near-full two-board layout** (legibility of the 5 tile patterns confirmed).
+- [ ] ARM `.app` `mosaik.app`, icon + `_f`, view.json @Games.
+
+---
+
 ## Appendix — Anti-Othello variant mode (not a new app)
 
 The recommended substitute for a standalone "Desdemona" (see `GAME_FEASIBILITY_EVAL.md`): add a
@@ -656,9 +765,9 @@ The recommended substitute for a standalone "Desdemona" (see `GAME_FEASIBILITY_E
 
 ## Cross-game build order & shared checklist
 Build in the **risk-ascending order from the top of this doc** (2048 → Hasami → Shong → Munkar →
-Sushi → Ringar → Go → Six), not the GAME-section numbers (2048 and Six are specced last as GAME 7
-and GAME 8 but sit at the ends of the effort range). For **every** game, the definition-of-done
-above plus
+Sushi → Mosaik → Ringar → Go → Six), not the GAME-section numbers (2048, Six, and Mosaik are
+specced as GAME 7/8/9 but sit at various points of the effort range). For **every** game, the
+definition-of-done above plus
 the universal gates from `SPEC_NEXT_GAMES.md` §"Definition of done": pure `game/` logic with tests,
 splash+rules (Swedish), menu with mode/difficulty + "Regler", all screens emulator-verified at worst
 case, ARM `.app` under a clean name with an 8-bit icon (+`_f`) registered in `view.json` @Games,
