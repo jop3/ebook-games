@@ -301,16 +301,20 @@ toggle set, the exact disc-flips — not the game agreeing with itself. When an
 end-state is hard to reach fairly, construct the board directly (the Othello
 tests set `a.gs.Board` to force each banner and a forced-pass position).
 
-The three shipped suites (~25 tests) show this on three UI shapes: **bullscows**
-(all difficulties, scoring vs an independent scorer, distinct-digit rule, quit/
-replay/rules), **lightsout** (all sizes solved via the grid, the plus-toggle rule
-verified cell-by-cell, hint = solver, Ny/quit/guards), **othello** (legal/illegal
-moves + exact flips, win/loss/tie banners, a crafted forced pass, full games vs
-the AI, hotseat driving both colours). Writing the first Othello play-through
-**found a real stall bug** — no AI move was queued when the human was forced to
-pass — now fixed in `othello/main.go`. That's the point: a play-through surfaces
-gameplay defects a screenshot never would. See
-[playtest/README.md](playtest/README.md) for the full API.
+**All 20 rule-based games now ship a play suite** (~125 `TestPlay*` funcs) —
+every game won/solved through the real touch path with its generator/AI/scoring
+invariants asserted. A few shapes to copy: **bullscows** (keypad deduction, win +
+scoring vs an independent scorer), **sudoku/akari/nonogram/slitherlink/etc.**
+(generate→solve: assert the puzzle is uniquely solvable, then solve it via the UI
+with the game's own solver), **othello/hex/nim/quarto** (turn-based AI: legal/
+illegal moves, win/loss/tie, full games vs the AI), **mastermind** (its Knuth
+solver cracks the player's code), **jotto/anagram** (word games vs an independent
+dictionary/scorer). Where a solver hid the answer it computes, expose it (see
+`akari.SolveBulbs`, `hashiwokakero.SolveBridges`) — additive and behaviour-
+preserving. Writing the first Othello play-through **found a real stall bug** — no
+AI move was queued when the human was forced to pass — now fixed in
+`othello/main.go`. That's the point: a play-through surfaces gameplay defects a
+screenshot never would. See [playtest/README.md](playtest/README.md) for the API.
 
 ---
 

@@ -99,7 +99,15 @@ control returns.
 
 ## What the shipped tests demonstrate
 
-Three worked suites (≈25 tests) that go well past the happy path:
+**All 20 rule-based games have play suites (~125 `TestPlay*` functions).** Every
+game is won/solved through the real touch path, with its generator / AI / scoring
+invariants asserted and each written rule cross-checked against an independent
+computation. Run them all with `playtest/play.sh all`. Two games' solvers were
+extended to expose the answer they already compute (`akari.SolveBulbs`,
+`hashiwokakero.SolveBridges`) — additive, behaviour-preserving, consistent with
+the sibling games whose solvers already return their result.
+
+Highlights that go well past the happy path:
 
 - **bullscows** (9) — wins on all three difficulties; scoring driven through the
   keypad and checked against an independent from-the-rules scorer; the
