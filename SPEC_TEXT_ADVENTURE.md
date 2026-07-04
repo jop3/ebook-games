@@ -347,20 +347,30 @@ Keep the generator out of the shipped module (it's a scratchpad tool); only the 
 
 ## 8. Verify + ship (guide §6, §7, §8)
 
-- **Unit-test the engine** with `scratchpad/check.ps1 grottan`: a fresh `New()`, a scripted walk
-  (well house → get lamp/keys → unlock grate → descend → `IsDark` true without lamp, false after
-  `LIGHT`), TAKE/DROP moving objects between room and inventory, and a save→load round-trip that
-  reproduces identical `State`. These are pure and cheap — write them first.
-- **Render every screen** to PNG with the inkrender emulator (`scratchpad/render.ps1 grottan …`):
-  splash, menu, rules, a room with several exits+objects, a long transcript scrolled, dark-room
-  message. **Emulator now shows real TTF text (guide §0a/§6)** — verify wrapping, that the verb bar
-  and exit/noun rows fit with bottom margin at the **worst case** (a room with many exits + many
-  objects + a long description). Check no bottom overflow (guide §5).
+- **Unit-test the engine** with a pure `go test ./story/` (the old `scratchpad/check.ps1` path):
+  a fresh `New()`, a scripted walk (well house → get lamp/keys → unlock grate → descend → `IsDark`
+  true without lamp, false after `LIGHT`), TAKE/DROP moving objects between room and inventory, and
+  a save→load round-trip that reproduces identical `State`. These are pure and cheap — write them
+  first. ✅ done in `grottan/story/engine_test.go`.
+- **Render every screen AND play the game** with the committed `playtest/` harness (guide §6b) —
+  the pure-Go `inkemu` emulator, runnable on any PC with no device/Docker/PowerShell:
+  `playtest/play.sh grottan`. A build-tagged `grottan/play_test.go` boots the real `app`, drives
+  the tap UI through the scripted opening, and renders splash, menu, rules, a room with several
+  exits+objects, a long scrolled transcript, and the dark-room message to PNG
+  (`PLAYTEST_SHOTS=… playtest/play.sh grottan`). It asserts no text overflows the real 1340px
+  drawable height at the **worst case** (many exits + many objects + a long description; guide §5).
+  ✅ done.
+- **Keep `play_test.go`, don't delete it.** The guide's older "delete `*_render_test.go`" note (guide
+  §6) applies only to the pre-harness scratchpad render tests that called `ink.Canvas()` directly.
+  The `//go:build playtest` files are the current convention (guide §6b): they're excluded from the
+  device `go build` by the tag and are **committed and kept** as regression guards, exactly like the
+  other 20 games' play suites.
 - **Build** ARM `.app` via the Docker SDK image (guide §7); confirm `ELF 32-bit ARM`. Ship under a
-  clean filename `grottan.app` matching the `U_grottan` view.json key.
+  clean filename `grottan.app` matching the `U_grottan` view.json key. *(Needs the Windows/WSL +
+  Docker toolchain — not runnable in a headless/web container; see `grottan/README.md` for the
+  handoff steps.)*
 - **view.json** entry under @Games (guide §8 recipe: absolute path, string-form icons,
   name-matched, no `param`). 8-bit BMP `grottan.bmp` + `grottan_f.bmp`.
-- Delete any `*_render_test.go` before shipping.
 
 ---
 

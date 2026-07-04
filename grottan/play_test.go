@@ -6,9 +6,10 @@
 // walk works end to end through the tap UI, render every screen to a PNG, and
 // check that nothing overflows the real 1340px drawable height at the worst case.
 //
-// Delete-before-ship note (spec §8): these are the "*_render_test.go"-class
-// files; they stay in the tree only for the playtest harness and are excluded
-// from `go build`/the Docker build by the tag.
+// This is the current harness convention (guide §6b): the `//go:build playtest`
+// tag makes the file invisible to `go build`/`go vet` and the device Docker
+// build, so — like the other 20 games' play suites — it is committed and kept as
+// a regression guard, NOT deleted before shipping.
 package main
 
 import (

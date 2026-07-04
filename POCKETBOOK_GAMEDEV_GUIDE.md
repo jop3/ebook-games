@@ -227,8 +227,10 @@ Copy-Item go.mod go.mod.bak
 go test . -run TestRender   # or go build ./... etc.
 Move-Item go.mod.bak go.mod    # ALWAYS restore before the Docker build
 ```
-Delete `*_render_test.go` before shipping (they reference `ink.Canvas()`/`ink.SetScreenSize()`
-which the real SDK lacks; `go build` for the .app ignores `_test.go`, but keep the tree clean).
+Delete any old-style `*_render_test.go` before shipping (the pre-harness kind that referenced
+`ink.Canvas()`/`ink.SetScreenSize()` directly; `go build` for the .app ignores `_test.go`, but keep
+the tree clean). **This does NOT apply to the build-tagged `play_test.go` files (§6b)** — those are
+gated by `//go:build playtest`, invisible to the device build, and are committed and kept.
 
 ---
 
