@@ -268,7 +268,7 @@ procedural generator for replayability. The generator follows the library's univ
 6. **Walls** to form chokepoints near checkpoints, so the final approach demands alignment (a turn +
    a move), not a straight sprint — this is the main *difficulty* lever, not board size.
 7. **Checkpoints** placed spaced apart (min Manhattan gap ∝ size); **priority antenna** central;
-   **start docks** clustered in an open area near checkpoint 1.
+   **start docks** on the bottom edge per the **Start-line contract** below.
 8. **Verify (regenerate on any failure):**
    - **Reachability:** BFS from each checkpoint to the next over non-lethal tiles must succeed.
    - **Solvable by a competent programmer:** run the §6 planner (Expert profile, fumble off) from a
@@ -278,12 +278,39 @@ procedural generator for replayability. The generator follows the library's univ
      Move-forward-only program would reach it, the course is too easy for its tier → regenerate.
    - **No belt-death loops:** simulate an idle robot dropped on each belt tile; it must not be
      conveyed into a pit/off-edge without any card able to save it.
-   - **Fairness of starts:** all start docks within a comparable distance of checkpoint 1.
+   - **Fairness of starts:** guaranteed by the Start-line contract below (bottom-row, spaced,
+     centered, clear launch zone, random assignment) — regenerate if no valid dock window exists.
 9. Seed the RNG explicitly (`rand.New(rand.NewSource(seed))`) so a course can be **replayed by seed**
    and every play-test is reproducible. Difficulty knobs (`d_pit`, express ratio, laser count, wall
    chokepoint count, round budget) are a small table keyed by an easy/medium/hard course setting —
    **separate from AI difficulty** (§6), so a beginner can play a hard course with clumsy AIs, or vice
    versa.
+
+### Start-line contract (MANDATORY for every course — fixed, generated, or future)
+The four start docks are not scattered — they form a fair, uniform starting line. **Any course
+generator or hand-authored board must satisfy all of these**, or robots stall/crash on turn one:
+
+1. **Bottom edge, one row.** All docks sit on the bottom row (`y = H-1`), so the whole field is
+   "ahead" of every racer and nobody starts facing off the board.
+2. **All face up (North).** Uniform heading into the board; no dock faces a wall or the edge.
+3. **Spaced with a free gap between neighbours.** Docks occupy *every other* column
+   (`x, x+2, x+4, x+6` → a 7-wide block for 4 docks), never adjacent — so two robots can't collide
+   on the first move and each has side room.
+4. **Centered.** The dock block is placed as close to the horizontal centre as a valid window allows
+   (ties broken randomly), not jammed against the left edge.
+5. **Clear launch zone.** The dock row **and the row directly ahead** are cleared of all hazards
+   (pits, belts, gears, lasers) and walls across the block's span, so no robot has a block or wall in
+   front of it — a `Move 1` always succeeds from the start.
+6. **Random robot→dock assignment.** Which robot (including the human) starts in which dock is a
+   fresh `rng.Perm` each game, so positions vary while the line stays fair. The *block position* is
+   centered/deterministic; only the *assignment* is random.
+7. **Reachable & no checkpoint/antenna clobbered.** The chosen window must not overlap a checkpoint
+   or the antenna, and dock1 → cp1 must pass the reachability check (step 8).
+
+This is enforced by `placeBottomDocks` (generator), the `NewGame` dock shuffle, and the
+`TestStartDocksHaveRoom` play/unit test (asserts, across every difficulty and many seeds: a
+non-lethal, unwalled tile in front of each dock, and no two docks adjacent). **Keep this invariant
+when adding new tile types, larger boards, or hand-authored courses.**
 
 Fixed courses live as literal tile arrays in `game/courses.go` (compact rune-map + a decoder, e.g.
 `.` floor, `>` belt-east, `»` express-east, `O` pit, `+` repair, `1` checkpoint-1, `#`+edge for

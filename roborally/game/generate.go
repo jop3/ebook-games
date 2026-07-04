@@ -209,7 +209,16 @@ func placeBottomDocks(b *Board, rng *rand.Rand) bool {
 	if len(starts) == 0 {
 		return false
 	}
-	x0 := starts[rng.Intn(len(starts))]
+	// Prefer a centered starting block; shuffle first so ties break randomly.
+	rng.Shuffle(len(starts), func(i, j int) { starts[i], starts[j] = starts[j], starts[i] })
+	ideal := (b.W - span) / 2
+	x0 := starts[0]
+	bestd := absi(x0 - ideal)
+	for _, s := range starts[1:] {
+		if d := absi(s - ideal); d < bestd {
+			bestd, x0 = d, s
+		}
+	}
 	// Clear the whole staging area: dock row + one row ahead, across the span.
 	for dx := 0; dx < span; dx++ {
 		clearAt(image.Pt(x0+dx, y))
@@ -312,8 +321,12 @@ func plainCourse(bd budget) *Board {
 		b.At(p).Checkpoint = uint8(ord)
 	}
 	y := sz - 1
+	off := (sz - 7) / 2 // centre the 4-dock, gap-spaced block
+	if off < 0 {
+		off = 0
+	}
 	for i := 0; i < 4; i++ {
-		x := i * 2
+		x := off + i*2
 		if x >= sz {
 			break
 		}
@@ -330,6 +343,13 @@ func plainCourse(bd budget) *Board {
 func max1(n int) int {
 	if n < 1 {
 		return 1
+	}
+	return n
+}
+
+func absi(n int) int {
+	if n < 0 {
+		return -n
 	}
 	return n
 }
