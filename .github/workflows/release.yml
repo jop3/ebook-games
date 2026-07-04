@@ -60,6 +60,10 @@ jobs:
               build -o "$m.app" .
             file "$m/$m.app"
             file "$m/$m.app" | grep -q ARM || { echo "::error::$m.app is not an ARM binary"; exit 1; }
-            gh release upload "$VERSION" "$m/$m.app" --clobber
+            # GitHub release assets disallow the .app extension, so ship each
+            # binary zipped (contains just <game>.app — unzip and copy to the
+            # device's applications/ folder).
+            (cd "$m" && zip -q "../$m.zip" "$m.app")
+            gh release upload "$VERSION" "$m.zip" --clobber
           done
-          echo "Attached all .app binaries to release $VERSION"
+          echo "Attached all games as <game>.zip to release $VERSION"
