@@ -42,6 +42,22 @@ const (
 // Solve runs the deduction solver on the board and reports whether it fully
 // and uniquely determines every white cell's bulb/no-bulb state.
 func Solve(b *Board) SolveResult {
+	_, r := solve(b)
+	return r
+}
+
+// SolveBulbs runs the deduction solver and, when the puzzle is uniquely
+// solvable, returns the bulb placement it deduced (true = bulb). The second
+// return is false for a stuck or contradictory board (bulbs is then nil). Used
+// to reveal/verify the intended solution.
+func SolveBulbs(b *Board) ([][]bool, bool) {
+	bulbs, r := solve(b)
+	return bulbs, r == SolveUnique
+}
+
+// solve is the shared deduction engine. On SolveUnique it also returns the
+// deduced bulb grid; otherwise the grid is nil.
+func solve(b *Board) ([][]bool, SolveResult) {
 	state := make([][]cellTri, b.H)
 	for y := range state {
 		state[y] = make([]cellTri, b.W)
@@ -110,19 +126,19 @@ func Solve(b *Board) SolveResult {
 				}
 				remaining := c.Number - bulbCount
 				if remaining < 0 || remaining > len(unknownCells) {
-					return SolveContradiction
+					return nil, SolveContradiction
 				}
 				if remaining == 0 {
 					for _, n := range unknownCells {
 						if !setBlank(n[0], n[1]) {
-							return SolveContradiction
+							return nil, SolveContradiction
 						}
 						changed = true
 					}
 				} else if remaining == len(unknownCells) && len(unknownCells) > 0 {
 					for _, n := range unknownCells {
 						if !setBulb(n[0], n[1]) {
-							return SolveContradiction
+							return nil, SolveContradiction
 						}
 						changed = true
 					}
@@ -143,7 +159,7 @@ func Solve(b *Board) SolveResult {
 							state[cy][cx] = sBlank
 							changed = true
 						} else if state[cy][cx] == sBulb {
-							return SolveContradiction
+							return nil, SolveContradiction
 						}
 						cx += d[0]
 						cy += d[1]
@@ -178,7 +194,7 @@ func Solve(b *Board) SolveResult {
 					}
 				}
 				if !canBeLit {
-					return SolveContradiction
+					return nil, SolveContradiction
 				}
 				// If itself is the ONLY candidate, force a bulb here.
 				onlySelf := true
@@ -194,7 +210,7 @@ func Solve(b *Board) SolveResult {
 				}
 				if onlySelf {
 					if !setBulb(x, y) {
-						return SolveContradiction
+						return nil, SolveContradiction
 					}
 					changed = true
 				}
@@ -210,7 +226,7 @@ func Solve(b *Board) SolveResult {
 	for y := 0; y < b.H; y++ {
 		for x := 0; x < b.W; x++ {
 			if b.at(x, y).Kind == White && state[y][x] == sUnknown {
-				return SolveStuck
+				return nil, SolveStuck
 			}
 		}
 	}
@@ -218,7 +234,7 @@ func Solve(b *Board) SolveResult {
 	// Final sanity check: the deduced solution must actually be valid.
 	bulbs := bulbsGrid()
 	if !Solved(b, bulbs) {
-		return SolveContradiction
+		return nil, SolveContradiction
 	}
-	return SolveUnique
+	return bulbs, SolveUnique
 }

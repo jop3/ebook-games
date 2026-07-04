@@ -21,6 +21,12 @@ _test_out.txt
 *.bak
 *.bak2
 
+# Play-test harness: generated screenshots and any stray Go workspace files
+# (playtest/play.sh builds its go.work in a temp dir, but guard against copies)
+playtest/_shots/
+go.work
+go.work.sum
+
 # OS
 .DS_Store
 Thumbs.db

@@ -165,6 +165,69 @@ func CountSolutions(p *Puzzle, limit int) int {
 	return s.rec(0, limit)
 }
 
+// SolveBridges returns a solution's bridge counts, keyed by pairKey(i,j) ->
+// count (1 or 2), for use in revealing/verifying the intended solution. The
+// second return is false if no solution is found within the call cap. It uses
+// the same degree/crossing pruning as the counter, stopping at the first full
+// solution.
+func SolveBridges(p *Puzzle) (map[[2]int]int, bool) {
+	s := newSolveState(p)
+	if !s.findFirst(0) {
+		return nil, false
+	}
+	out := map[[2]int]int{}
+	for idx, pr := range s.pairs {
+		if s.count[idx] > 0 {
+			out[pairKey(pr.i, pr.j)] = s.count[idx]
+		}
+	}
+	return out, true
+}
+
+// findFirst is rec's early-exit twin: it stops at the first complete, connected
+// solution and leaves s.count holding that assignment.
+func (s *solveState) findFirst(idx int) bool {
+	s.calls++
+	if s.calls > s.callCap {
+		return false
+	}
+	if idx == len(s.pairs) {
+		for i, isl := range s.p.Islands {
+			if s.degree[i] != isl.Need {
+				return false
+			}
+		}
+		return s.connectedFinal()
+	}
+	pr := s.pairs[idx]
+	for c := 0; c <= 2; c++ {
+		if c > 0 && s.crossesAny2(idx, c) {
+			continue
+		}
+		ni := s.degree[pr.i] + c
+		nj := s.degree[pr.j] + c
+		if ni > s.p.Islands[pr.i].Need || nj > s.p.Islands[pr.j].Need {
+			continue
+		}
+		if ni+s.remainingCapAt(pr.i, idx+1) < s.p.Islands[pr.i].Need {
+			continue
+		}
+		if nj+s.remainingCapAt(pr.j, idx+1) < s.p.Islands[pr.j].Need {
+			continue
+		}
+		s.count[idx] = c
+		s.degree[pr.i] += c
+		s.degree[pr.j] += c
+		if s.findFirst(idx + 1) {
+			return true // leave s.count intact so the caller can read the solution
+		}
+		s.degree[pr.i] -= c
+		s.degree[pr.j] -= c
+		s.count[idx] = 0
+	}
+	return false
+}
+
 // Solve reports SolveUnique/SolveStuck/SolveContradiction.
 func Solve(p *Puzzle) SolveResult {
 	n := CountSolutions(p, 2)

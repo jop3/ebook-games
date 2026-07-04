@@ -19,6 +19,9 @@ Target device: **PocketBook Verse Pro (PB634)**, e-ink, **1072×1448 portrait**,
 4. **Icons are via `view.json` + 8-bit BMPs**, not `<app>.app.bmp`. (§8)
 5. **The emulator renders REAL text** and now **auto-flags off-screen / margin overflow** against the
    real 1340 height — run the bounds audit on every screen (§6, `scratchpad/BOUNDS_AUDIT_HOWTO.md`).
+6. **Screenshots aren't enough — PLAY the game.** `playtest/play.sh <game>` boots the real app and
+   drives it through taps to check the gameplay actually works (winnable, correct feedback, AI
+   replies, no stalls). Add a `play_test.go` for every new game. (§6b)
 
 ---
 
@@ -226,6 +229,92 @@ Move-Item go.mod.bak go.mod    # ALWAYS restore before the Docker build
 ```
 Delete `*_render_test.go` before shipping (they reference `ink.Canvas()`/`ink.SetScreenSize()`
 which the real SDK lacks; `go build` for the .app ignores `_test.go`, but keep the tree clean).
+
+---
+
+## 6b. Play-test harness — actually PLAY the game and check it works
+
+The screenshot emulator (§6) renders *one frame*. It can't tell you whether the
+game is **winnable through the UI**, whether the feedback shown is **correct**,
+whether an **AI opponent replies**, or whether a flow **stalls**. That's what
+`playtest/` does: it boots a game's real `app` and drives it through the real
+`Init → Draw → Pointer/Key` path with injected taps/keys, so a Go test can play a
+whole game and assert the gameplay holds.
+
+It runs on a normal PC (Linux/macOS/Windows, Go ≥ 1.25) — **no device, no Docker,
+no cgo, no PowerShell.** `playtest/inkemu` is a committed, pure-Go, drop-in
+re-implementation of the `ink` subset the games use (framebuffer + real TrueType
+text via the bundled Go fonts + input injection + PNG screenshot). Its module
+path *is* `github.com/dennwc/inkview`, so a throwaway `go.work` `use`s it and it
+wins over the game's `replace` to `third_party/inkview` — **nothing tracked in
+git is edited** (unlike the §6 go.mod dance).
+
+```bash
+playtest/play.sh bullscows -v         # play one game
+playtest/play.sh all                  # every game with a play_test.go
+PLAYTEST_SHOTS=$PWD/playtest/_shots playtest/play.sh othello   # + screenshots
+```
+
+**Write one** as `<game>/play_test.go`, `package main`, gated so it never touches
+other tooling or the device build:
+
+```go
+//go:build playtest
+
+package main
+
+import ( "testing"; ink "github.com/dennwc/inkview" )
+
+func TestPlayFoo(t *testing.T) {
+    a := &app{}                       // the game's real top-level struct
+    h, err := ink.Boot(a)             // runs Init() + first Draw()
+    if err != nil { t.Fatal(err) }
+    h.TapXY(500, 700)                 // dismiss splash
+    h.TapRect(a.menuBtns[0].rect)     // start a game via its own hit rects
+    // ... play, then assert on real app/game state ...
+}
+```
+
+Being `package main`, the test reads the app's own hit targets
+(`a.buttons`, `a.keys`, `a.menuBtns`, `a.layout.CellToScreen`) and the pure
+`game` package, so it taps where the game actually drew things and asserts
+against real state — exercising input→logic→display end to end. Key harness
+calls: `ink.Boot`, `h.Tap/TapXY/TapRect`, `h.Press/Back`, `h.Texts`,
+`h.FindText(Contains)`, `h.TapText`, `h.Screenshot`. After each injected event
+the harness re-runs `Draw()` until the app stops calling `Repaint()`, so deferred
+work (Othello's AI reply lands on the next frame) settles first.
+
+**The `//go:build playtest` tag is mandatory** on every `play_test.go`, and every
+test function must be named `TestPlay…` (that's how `play.sh`'s `-run TestPlay`
+finds them). The tag makes them compile *only* under `play.sh` (which passes
+`-tags playtest`), so a normal `go build`/`go vet`, the inkstub `go test`, and the
+Docker `.app` build all ignore them. Unlike the §6 render tests, these are meant
+to be **committed and kept** as regression guards.
+
+**Test the whole rulebook, not the happy path.** Per the game's written rules,
+cover: every difficulty / size / mode (all "sides"); win **and** loss **and** tie
+end-states and their banners; quitting mid-play (Back key *and* the Meny button),
+restarting, replaying; input guards (illegal moves rejected, no input after the
+game ends, taps off the board ignored); and each rule checked against an
+*independent* computation in the test — a from-scratch scorer, the expected
+toggle set, the exact disc-flips — not the game agreeing with itself. When an
+end-state is hard to reach fairly, construct the board directly (the Othello
+tests set `a.gs.Board` to force each banner and a forced-pass position).
+
+**All 20 rule-based games now ship a play suite** (~125 `TestPlay*` funcs) —
+every game won/solved through the real touch path with its generator/AI/scoring
+invariants asserted. A few shapes to copy: **bullscows** (keypad deduction, win +
+scoring vs an independent scorer), **sudoku/akari/nonogram/slitherlink/etc.**
+(generate→solve: assert the puzzle is uniquely solvable, then solve it via the UI
+with the game's own solver), **othello/hex/nim/quarto** (turn-based AI: legal/
+illegal moves, win/loss/tie, full games vs the AI), **mastermind** (its Knuth
+solver cracks the player's code), **jotto/anagram** (word games vs an independent
+dictionary/scorer). Where a solver hid the answer it computes, expose it (see
+`akari.SolveBulbs`, `hashiwokakero.SolveBridges`) — additive and behaviour-
+preserving. Writing the first Othello play-through **found a real stall bug** — no
+AI move was queued when the human was forced to pass — now fixed in
+`othello/main.go`. That's the point: a play-through surfaces gameplay defects a
+screenshot never would. See [playtest/README.md](playtest/README.md) for the API.
 
 ---
 
