@@ -214,6 +214,57 @@ func TestPlayDarkRoom(t *testing.T) {
 	assertNoOverflow(t, h, "lit debris room")
 }
 
+// TestPlayMap explores a few rooms, opens the Karta screen, and checks the map
+// renders the visited nodes, the current-room highlight, and unexplored stubs.
+func TestPlayMap(t *testing.T) {
+	a, h := boot(t)
+	h.TapXY(500, 900)
+	h.TapRect(findBtn(t, a.menuBtns, "Nytt spel").Rect)
+
+	// Walk a short loop so several rooms are visited.
+	h.TapRect(findBtn(t, a.exitBtns, "Öster").Rect)  // -> well house
+	h.TapRect(findBtn(t, a.exitBtns, "Väster").Rect) // -> road
+	h.TapRect(findBtn(t, a.exitBtns, "Söder").Rect)  // -> valley
+	if a.st.Loc != story.LOC_VALLEY {
+		t.Fatalf("expected to be in the valley, at %d", a.st.Loc)
+	}
+
+	// Open the map.
+	h.TapRect(a.mapBtn)
+	if a.screen != screenMap {
+		t.Fatalf("Karta did not open the map (screen=%d)", a.screen)
+	}
+	shot(t, h, "12_map")
+	assertNoOverflow(t, h, "map")
+
+	// Visited room labels must be on screen; a far unvisited room must not.
+	if _, ok := h.FindText(story.MapLabels[story.LOC_BUILDING]); !ok {
+		t.Error("map missing the visited well-house node")
+	}
+	if _, ok := h.FindText(story.MapLabels[story.LOC_NUGGET]); ok {
+		t.Error("map is leaking an unvisited far cave room")
+	}
+	if _, ok := h.FindTextContains("du är här"); !ok {
+		t.Error("map missing the 'you are here' marker")
+	}
+
+	// Tillbaka returns to play.
+	h.TapRect(a.mapBack)
+	if a.screen != screenGame {
+		t.Fatalf("Tillbaka did not return to game (screen=%d)", a.screen)
+	}
+
+	// Render a fully-explored map so the whole cave graph is visible.
+	for loc := range story.MapPositions {
+		a.st.Visited[loc] = true
+	}
+	a.st.Loc = story.LOC_MISTHALL
+	a.screen = screenMap
+	h.Draw()
+	shot(t, h, "13_map_full")
+	assertNoOverflow(t, h, "full map")
+}
+
 // TestPlayWorstCaseAndScroll builds a crowded room (many exits + many objects)
 // and a long transcript, then scrolls — the hardest layout to keep on-screen.
 func TestPlayWorstCaseAndScroll(t *testing.T) {

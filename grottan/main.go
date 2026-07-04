@@ -28,6 +28,7 @@ const (
 	screenMenu
 	screenGame
 	screenRules
+	screenMap // the explored-map, reached from a "Karta" button in-game
 )
 
 type app struct {
@@ -54,9 +55,11 @@ type app struct {
 	sayBtns    []button
 	menuBtns   []button
 	menuBtn    image.Rectangle
+	mapBtn     image.Rectangle
 	scrollUp   image.Rectangle
 	scrollDown image.Rectangle
 	rulesBack  image.Rectangle
+	mapBack    image.Rectangle
 
 	// pointer-down tracking for swipe scrolling.
 	downY     int
@@ -124,6 +127,9 @@ func (a *app) Draw() {
 	case screenRules:
 		a.rulesBack = DrawRules(sz, a.fonts, "Grottan", rulesParagraphs)
 		ink.FullUpdate()
+	case screenMap:
+		a.mapBack = a.drawMap(sz)
+		ink.FullUpdate()
 	}
 }
 
@@ -174,6 +180,10 @@ func (a *app) pointerUp(p image.Point) bool {
 func (a *app) Key(e ink.KeyEvent) bool {
 	if e.State == ink.KeyStateUp && e.Key == ink.KeyBack {
 		switch a.screen {
+		case screenMap:
+			a.screen = screenGame // the map is a sub-screen of play
+			ink.Repaint()
+			return true
 		case screenGame, screenRules:
 			a.screen = screenMenu
 			ink.Repaint()
@@ -207,6 +217,12 @@ func (a *app) handleTap(p image.Point) bool {
 	case screenRules:
 		if p.In(a.rulesBack) {
 			a.screen = screenMenu
+			ink.Repaint()
+			return true
+		}
+	case screenMap:
+		if p.In(a.mapBack) {
+			a.screen = screenGame
 			ink.Repaint()
 			return true
 		}
@@ -257,6 +273,11 @@ func (a *app) tapGame(p image.Point) bool {
 	if p.In(a.menuBtn) {
 		a.autosave()
 		a.screen = screenMenu
+		ink.Repaint()
+		return true
+	}
+	if p.In(a.mapBtn) {
+		a.screen = screenMap
 		ink.Repaint()
 		return true
 	}

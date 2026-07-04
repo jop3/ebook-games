@@ -87,15 +87,24 @@ func (a *app) drawGame(sz image.Point) {
 
 func (a *app) drawHeader(W int) {
 	top := image.Rect(0, topMargin, W, topMargin+headerH)
+
+	// "Meny" and "Karta" buttons, right-aligned (Meny outermost).
+	bw := 150
+	bgap := 10
+	menu := image.Rect(W-sideMargin-bw, top.Min.Y+4, W-sideMargin, top.Max.Y-4)
+	mapb := image.Rect(menu.Min.X-bgap-bw, top.Min.Y+4, menu.Min.X-bgap, top.Max.Y-4)
+	drawButton(menu, "Meny", false, a.fonts.Button)
+	drawButton(mapb, "Karta", false, a.fonts.Button)
+	a.menuBtn = menu
+	a.mapBtn = mapb
+
+	// Room name, clipped so it never runs under the buttons.
 	a.fonts.Header.SetActive(ink.Black)
 	name := story.RoomName(a.st)
+	for ink.StringWidth(name) > mapb.Min.X-sideMargin-16 && len(name) > 1 {
+		name = name[:len(name)-1]
+	}
 	ink.DrawString(image.Pt(sideMargin, top.Min.Y+(headerH-40)/2), name)
-
-	// "Meny" button, right-aligned.
-	mw := 150
-	mb := image.Rect(W-sideMargin-mw, top.Min.Y+4, W-sideMargin, top.Max.Y-4)
-	drawButton(mb, "Meny", false, a.fonts.Button)
-	a.menuBtn = mb
 
 	ink.DrawLine(image.Pt(0, top.Max.Y), image.Pt(W, top.Max.Y), ink.Black)
 }
@@ -365,6 +374,124 @@ func drawButton(r image.Rectangle, label string, armed bool, f *ink.Font) {
 	}
 	drawCentered(r, s, 30)
 	f.SetActive(ink.Black)
+}
+
+// --- map screen -------------------------------------------------------------
+
+// drawMap renders the explored-cave map — a node-and-corridor diagram that fills
+// in as rooms are visited — and returns the "Tillbaka" button rect. Visited
+// rooms are solid nodes, the current room is inverted, and passages to
+// still-unexplored rooms end in a hollow "?" stub.
+func (a *app) drawMap(sz image.Point) image.Rectangle {
+	ink.ClearScreen()
+	W := sz.X
+
+	tf := ink.OpenFont(ink.DefaultFontBold, 56, true)
+	tf.SetActive(ink.Black)
+	ink.DrawString(image.Pt((W-ink.StringWidth("Karta"))/2, 40), "Karta")
+	tf.Close()
+
+	a.fonts.Body.SetActive(ink.DarkGray)
+	hint := "Fyllda rutor = besökta rum · ? = outforskad gång"
+	ink.DrawString(image.Pt((W-ink.StringWidth(hint))/2, 108), hint)
+
+	// Drawing area between the hint and the back button.
+	backH := 100
+	area := image.Rect(sideMargin, 160, W-sideMargin, usableH-bottomMargin-backH-24)
+	cellW := area.Dx() / story.MapCols
+	cellH := area.Dy() / story.MapRows
+
+	center := func(pos story.MapPos) image.Point {
+		return image.Pt(area.Min.X+pos.Col*cellW+cellW/2, area.Min.Y+pos.Row*cellH+cellH/2)
+	}
+	drawn := func(loc story.LocID) bool {
+		return a.st.Visited[loc] || loc == a.st.Loc
+	}
+	stubs := story.MapVisibleNeighbors(a.st)
+	visible := func(loc story.LocID) bool { return drawn(loc) || stubs[loc] }
+
+	// The surface/underground divider line.
+	divY := area.Min.Y + story.MapUndergroundRow*cellH - cellH/2
+	for x := area.Min.X; x < area.Max.X; x += 18 {
+		ink.DrawLine(image.Pt(x, divY), image.Pt(x+8, divY), ink.LightGray)
+	}
+	a.fonts.Label.SetActive(ink.DarkGray)
+	divLabel := " under jord "
+	dlw := ink.StringWidth(divLabel)
+	dlx := area.Min.X + 12 // left-aligned so it never sits under the center-column node
+	ink.FillArea(image.Rect(dlx-4, divY-16, dlx+dlw+4, divY+16), ink.White)
+	ink.DrawString(image.Pt(dlx, divY-14), divLabel)
+
+	// Corridors first, so nodes sit on top.
+	for _, e := range story.MapGraph() {
+		if !visible(e.A) || !visible(e.B) {
+			continue
+		}
+		pa, pb := center(story.MapPositions[e.A]), center(story.MapPositions[e.B])
+		for o := -1; o <= 1; o++ {
+			ink.DrawLine(pa.Add(image.Pt(0, o)), pb.Add(image.Pt(0, o)), ink.DarkGray)
+		}
+	}
+
+	// Nodes.
+	halfW := cellW/2 - 10
+	if halfW > 120 {
+		halfW = 120
+	}
+	halfH := 30
+	for loc, pos := range story.MapPositions {
+		c := center(pos)
+		switch {
+		case loc == a.st.Loc:
+			r := image.Rect(c.X-halfW, c.Y-halfH, c.X+halfW, c.Y+halfH)
+			ink.FillArea(r, ink.Black)
+			a.fonts.Label.SetActive(ink.White)
+			drawCentered(r, mapLabelFit(story.MapLabels[loc], 2*halfW-12), 26)
+		case a.st.Visited[loc]:
+			r := image.Rect(c.X-halfW, c.Y-halfH, c.X+halfW, c.Y+halfH)
+			ink.FillArea(r, ink.White)
+			ink.DrawRect(r, ink.Black)
+			ink.DrawRect(pad(r, 1), ink.Black)
+			a.fonts.Label.SetActive(ink.Black)
+			drawCentered(r, mapLabelFit(story.MapLabels[loc], 2*halfW-12), 26)
+		case stubs[loc]:
+			r := image.Rect(c.X-30, c.Y-30, c.X+30, c.Y+30)
+			ink.FillArea(r, ink.White)
+			ink.DrawRect(r, ink.LightGray)
+			a.fonts.Header.SetActive(ink.DarkGray)
+			drawCentered(r, "?", 40)
+		}
+	}
+
+	// "Du är här" caption for the current room.
+	if p, ok := story.MapPositions[a.st.Loc]; ok {
+		c := center(p)
+		a.fonts.Label.SetActive(ink.DarkGray)
+		here := "▲ du är här"
+		hw := ink.StringWidth(here)
+		hx, hy := c.X-hw/2, c.Y+halfH+6
+		ink.FillArea(image.Rect(hx-6, hy-2, hx+hw+6, hy+30), ink.White) // clear the corridor line behind it
+		ink.DrawString(image.Pt(hx, hy), here)
+	}
+
+	// Back button.
+	bw := W / 2
+	bottom := usableH - bottomMargin
+	r := image.Rect((W-bw)/2, bottom-backH, (W+bw)/2, bottom)
+	drawButton(r, "Tillbaka", false, a.fonts.Button)
+	return r
+}
+
+// mapLabelFit truncates a node label to fit its box (ellipsizing as a last
+// resort), measured with the active font.
+func mapLabelFit(s string, maxW int) string {
+	if ink.StringWidth(s) <= maxW {
+		return s
+	}
+	for ink.StringWidth(s+"…") > maxW && len(s) > 1 {
+		s = s[:len(s)-1]
+	}
+	return s + "…"
 }
 
 // --- menu -------------------------------------------------------------------
