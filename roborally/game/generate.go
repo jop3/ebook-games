@@ -161,20 +161,45 @@ func buildCandidate(bd budget, rng *rand.Rand) *Board {
 	return b
 }
 
-// placeBottomDocks lays four adjacent start docks on the bottom row, clearing
-// any hazards under them. Returns false if no four-wide gap free of a checkpoint
-// or the antenna exists there.
+// placeBottomDocks lays four start docks on the bottom row with a free gap
+// between each (so neighbours never touch) and clears the dock row plus the row
+// directly ahead (so no robot has a pit or wall blocking its first move up).
+// Returns false if no suitable window free of a checkpoint or the antenna exists.
 func placeBottomDocks(b *Board, rng *rand.Rand) bool {
 	const n = 4
+	span := 2*n - 1 // dock, gap, dock, gap, dock, gap, dock  -> 7 columns
+	step := 2
+	if b.W < span { // tiny board: fall back to adjacent docks
+		span, step = n, 1
+	}
 	y := b.H - 1
+	clearAt := func(p image.Point) {
+		if !b.In(p) {
+			return
+		}
+		t := b.At(p)
+		t.Kind = FloorPlain
+		t.Belt = DirNone
+		t.BeltExpress = false
+		t.Gear = GearNone
+		t.Laser = DirNone
+		t.Walls = 0
+	}
+	// Windows whose bottom two rows hold no checkpoint/antenna (which we mustn't
+	// clear away).
 	var starts []int
-	for x0 := 0; x0+n <= b.W; x0++ {
+	for x0 := 0; x0+span <= b.W; x0++ {
 		ok := true
-		for i := 0; i < n; i++ {
-			t := b.At(image.Pt(x0+i, y))
-			if t.Checkpoint != 0 || t.Antenna {
-				ok = false
-				break
+		for dx := 0; dx < span && ok; dx++ {
+			for _, yy := range []int{y, y - 1} {
+				if yy < 0 {
+					continue
+				}
+				t := b.At(image.Pt(x0+dx, yy))
+				if t.Checkpoint != 0 || t.Antenna {
+					ok = false
+					break
+				}
 			}
 		}
 		if ok {
@@ -185,16 +210,14 @@ func placeBottomDocks(b *Board, rng *rand.Rand) bool {
 		return false
 	}
 	x0 := starts[rng.Intn(len(starts))]
+	// Clear the whole staging area: dock row + one row ahead, across the span.
+	for dx := 0; dx < span; dx++ {
+		clearAt(image.Pt(x0+dx, y))
+		clearAt(image.Pt(x0+dx, y-1))
+	}
 	for i := 0; i < n; i++ {
-		p := image.Pt(x0+i, y)
-		t := b.At(p)
-		t.Kind = FloorPlain
-		t.Belt = DirNone
-		t.BeltExpress = false
-		t.Gear = GearNone
-		t.Laser = DirNone
-		t.Walls = 0
-		t.StartDock = uint8(i + 1)
+		p := image.Pt(x0+i*step, y)
+		b.At(p).StartDock = uint8(i + 1)
 		b.Docks = append(b.Docks, dock{Pos: p, Facing: N})
 	}
 	return true
@@ -289,8 +312,12 @@ func plainCourse(bd budget) *Board {
 		b.At(p).Checkpoint = uint8(ord)
 	}
 	y := sz - 1
-	for i := 0; i < 4 && i < sz; i++ {
-		p := image.Pt(i, y)
+	for i := 0; i < 4; i++ {
+		x := i * 2
+		if x >= sz {
+			break
+		}
+		p := image.Pt(x, y)
 		if isSpecial(b.At(p)) {
 			continue
 		}

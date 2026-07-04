@@ -217,6 +217,32 @@ func TestGeneratorProducesSolvableCourses(t *testing.T) {
 	}
 }
 
+// TestStartDocksHaveRoom checks every start dock has a clear tile ahead (no pit,
+// edge, or wall blocking the first move) and that no two docks are adjacent.
+func TestStartDocksHaveRoom(t *testing.T) {
+	for _, diff := range []CourseDiff{DiffEasy, DiffMedium, DiffHard} {
+		for seed := int64(1); seed <= 12; seed++ {
+			b := GenerateCourse(diff, seed)
+			for _, d := range b.Docks {
+				if b.wallBetween(d.Pos, d.Facing) {
+					t.Fatalf("%v seed %d: wall in front of dock at %v", diff, seed, d.Pos)
+				}
+				if b.lethal(d.Pos.Add(d.Facing.Step())) {
+					t.Fatalf("%v seed %d: hazard/edge in front of dock at %v", diff, seed, d.Pos)
+				}
+			}
+			for i := range b.Docks {
+				for j := i + 1; j < len(b.Docks); j++ {
+					if manhattan(b.Docks[i].Pos, b.Docks[j].Pos) < 2 {
+						t.Fatalf("%v seed %d: docks %v and %v are adjacent",
+							diff, seed, b.Docks[i].Pos, b.Docks[j].Pos)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestExpertReachesCheckpoints(t *testing.T) {
 	b := GenerateCourse(DiffMedium, 5)
 	rounds, ok := solveReference(b, budgetFor(DiffMedium))
