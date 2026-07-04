@@ -89,6 +89,11 @@ func (a *app) Draw() {
 			a.aiPend = false
 			if a.gs.StepAI() {
 				a.updates++
+				// If the human had no legal reply (forced pass), it is the AI's
+				// turn again — queue the next AI move so play doesn't stall.
+				if a.gs.AITurn() {
+					a.aiPend = true
+				}
 				ink.Repaint()
 			}
 		}
