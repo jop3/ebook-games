@@ -45,13 +45,13 @@ before starting a new game.
 | [hexa](hexa/) | Hexa — hex-tile mosaic, line up 6 of your own tiles (based on Six) |
 | [grottan](grottan/) | Grottan — tap-driven text adventure (a port of Colossal Cave) |
 | [studie](studie/) | En Studie i Grått — tap-driven locked-room mystery on the Grottan engine |
-| [screentest](screentest/) | Diagnostic app for screen/input debugging |
 
 ## Other apps
 
 | Folder | What it does |
 |---|---|
 | [lasordning](lasordning/) | Reads the device's library DB and shows books grouped by series in reading order |
+| [screentest](screentest/) | Diagnostic app for screen/input debugging |
 
 ## Building
 
