@@ -8,6 +8,15 @@ const (
 	ModeAI                  // human is Black, AI is White
 )
 
+// Variant selects the win condition: normal Othello (most discs wins) or the
+// "Anti-Othello"/"Omvänd Othello" house variant (fewest discs wins).
+type Variant int
+
+const (
+	VariantNormal Variant = iota
+	VariantAnti
+)
+
 // Phase is the high-level state of a game.
 type Phase int
 
@@ -21,6 +30,7 @@ type GameState struct {
 	Board    Board
 	Turn     Cell // Black or White
 	Mode     Mode
+	Variant  Variant
 	Phase    Phase
 	Passed   bool // did the previous ply have to pass?
 	LastPass bool // was the most recent transition a forced pass? (for status)
@@ -28,11 +38,12 @@ type GameState struct {
 }
 
 // NewGame starts a fresh game.
-func NewGame(mode Mode, aiLevel int) *GameState {
+func NewGame(mode Mode, aiLevel int, variant Variant) *GameState {
 	return &GameState{
 		Board:   NewBoard(),
 		Turn:    Black,
 		Mode:    mode,
+		Variant: variant,
 		Phase:   PhasePlaying,
 		AILevel: aiLevel,
 	}
@@ -79,17 +90,21 @@ func (s *GameState) advance() {
 }
 
 // Winner returns the winning color, or Empty for a tie. Only meaningful when
-// Phase == PhaseDone.
+// Phase == PhaseDone. In VariantAnti ("Omvänd Othello") the win condition
+// flips: the side with the FEWEST discs wins.
 func (s *GameState) Winner() Cell {
 	bl, wh := s.Board.Count(Black), s.Board.Count(White)
-	switch {
-	case bl > wh:
-		return Black
-	case wh > bl:
-		return White
-	default:
+	if bl == wh {
 		return Empty
 	}
+	blackWins := bl > wh
+	if s.Variant == VariantAnti {
+		blackWins = !blackWins
+	}
+	if blackWins {
+		return Black
+	}
+	return White
 }
 
 // StepAI plays the AI's move (ModeAI, White to move). Returns true if a move was
@@ -98,7 +113,7 @@ func (s *GameState) StepAI() bool {
 	if !s.AITurn() {
 		return false
 	}
-	mv, ok := BestMove(&s.Board, White, s.AILevel)
+	mv, ok := BestMove(&s.Board, White, s.AILevel, s.Variant)
 	if !ok {
 		// Shouldn't happen (advance handles passes), but be safe.
 		s.advance()

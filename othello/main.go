@@ -128,14 +128,18 @@ func (a *app) statusText() string {
 	s := a.gs
 	bl, wh := s.Board.Count(game.Black), s.Board.Count(game.White)
 	score := "Svart " + itoa(bl) + " – Vit " + itoa(wh)
+	variantTag := ""
+	if s.Variant == game.VariantAnti {
+		variantTag = " (Omvänd)"
+	}
 	if s.Phase == game.PhaseDone {
 		switch s.Winner() {
 		case game.Black:
-			return "Svart vinner!  " + score
+			return "Svart vinner!" + variantTag + "  " + score
 		case game.White:
-			return "Vit vinner!  " + score
+			return "Vit vinner!" + variantTag + "  " + score
 		default:
-			return "Oavgjort!  " + score
+			return "Oavgjort!" + variantTag + "  " + score
 		}
 	}
 	turn := "Svart"
@@ -149,7 +153,7 @@ func (a *app) statusText() string {
 	if s.LastPass {
 		pre = "Pass! "
 	}
-	return pre + turn + " drar   ·   " + score
+	return pre + turn + " drar" + variantTag + "   ·   " + score
 }
 
 func (a *app) Key(e ink.KeyEvent) bool {
@@ -203,15 +207,19 @@ func (a *app) tapMenu(p image.Point) bool {
 		ink.Repaint()
 		return true
 	}
+	if a.menu.TapVariantToggle(p) {
+		ink.Repaint()
+		return true
+	}
 	if choice, ok := a.menu.HandleTouch(p); ok {
-		a.startGame(choice.mode, choice.aiLevel)
+		a.startGame(choice.mode, choice.aiLevel, a.menu.variant)
 		return true
 	}
 	return false
 }
 
-func (a *app) startGame(mode game.Mode, aiLevel int) {
-	a.gs = game.NewGame(mode, aiLevel)
+func (a *app) startGame(mode game.Mode, aiLevel int, variant game.Variant) {
+	a.gs = game.NewGame(mode, aiLevel, variant)
 	a.screen = screenGame
 	a.updates = 0
 	a.aiPend = false
@@ -244,7 +252,7 @@ func (a *app) tapGame(p image.Point) bool {
 func (a *app) handleButton(label string) bool {
 	switch label {
 	case "Spela igen":
-		a.startGame(a.gs.Mode, a.gs.AILevel)
+		a.startGame(a.gs.Mode, a.gs.AILevel, a.gs.Variant)
 		return true
 	case "Meny":
 		a.screen = screenMenu

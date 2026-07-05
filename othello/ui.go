@@ -283,11 +283,14 @@ type menuRow struct {
 }
 
 type Menu struct {
-	rows     []menuRow
-	rulesBtn image.Rectangle
+	variant game.Variant
+
+	variantBtns [2]image.Rectangle // [0]=Vanlig, [1]=Omvänd
+	rows        []menuRow
+	rulesBtn    image.Rectangle
 }
 
-func NewMenu() *Menu { return &Menu{} }
+func NewMenu() *Menu { return &Menu{variant: game.VariantNormal} }
 
 // choices lists the game modes offered on the start screen.
 var choices = []menuChoice{
@@ -304,19 +307,40 @@ func (m *Menu) Draw(screen image.Point, f *Fonts) {
 	title := ink.OpenFont(ink.DefaultFontBold, 64, true)
 	title.SetActive(ink.Black)
 	tw := ink.StringWidth("Othello")
-	ink.DrawString(image.Pt((screen.X-tw)/2, 70), "Othello")
+	ink.DrawString(image.Pt((screen.X-tw)/2, 60), "Othello")
 	title.Close()
 
-	sub := ink.OpenFont(ink.DefaultFont, 34, true)
+	sub := ink.OpenFont(ink.DefaultFont, 30, true)
 	sub.SetActive(ink.Black)
 	subT := "Välj spelläge"
 	sw := ink.StringWidth(subT)
-	ink.DrawString(image.Pt((screen.X-sw)/2, 170), subT)
+	ink.DrawString(image.Pt((screen.X-sw)/2, 140), subT)
 	sub.Close()
 
-	// Bottom-anchored "Regler" button, stacked up from H-margin.
+	// Vanlig/Omvänd variant toggle: two buttons side by side, same pattern as
+	// the other games' win-mode toggles; the selected one gets a bold border.
 	margin := 60
 	rowW := screen.X - 2*margin
+	toggleY := 190
+	toggleH := 84
+	gap := 20
+	btnW := (rowW - gap) / 2
+	variantLabels := [2]string{"Vanlig", "Omvänd"}
+	f.Menu.SetActive(ink.Black)
+	for i := 0; i < 2; i++ {
+		x0 := margin + i*(btnW+gap)
+		r := image.Rect(x0, toggleY, x0+btnW, toggleY+toggleH)
+		ink.DrawRect(r, ink.Black)
+		selected := (i == 0 && m.variant == game.VariantNormal) || (i == 1 && m.variant == game.VariantAnti)
+		if selected {
+			ink.DrawRect(pad(r, 3), ink.Black)
+			ink.DrawRect(pad(r, 4), ink.Black)
+		}
+		drawCenteredString(r, variantLabels[i], 36)
+		m.variantBtns[i] = r
+	}
+
+	// Bottom-anchored "Regler" button, stacked up from H-margin.
 	rbW := rowW / 2
 	rbH := 100
 	rb := image.Rect((screen.X-rbW)/2, H-margin-rbH, (screen.X+rbW)/2, H-margin)
@@ -325,10 +349,9 @@ func (m *Menu) Draw(screen image.Point, f *Fonts) {
 	drawCenteredString(rb, "Regler", 40)
 	m.rulesBtn = rb
 
-	// Mode rows fill the space between the subtitle and the Regler button.
-	f.Menu.SetActive(ink.Black)
-	rowH := 130
-	top := 300
+	// Mode rows fill the space between the toggle and the Regler button.
+	rowH := 116
+	top := toggleY + toggleH + 30
 	bottom := rb.Min.Y - 30
 	n := len(choices)
 	avail := bottom - top
@@ -339,13 +362,27 @@ func (m *Menu) Draw(screen image.Point, f *Fonts) {
 
 	m.rows = m.rows[:0]
 	for _, c := range choices {
-		r := image.Rect(margin, y, margin+rowW, y+rowH-20)
+		r := image.Rect(margin, y, margin+rowW, y+rowH-18)
 		ink.DrawRect(r, ink.Black)
 		ink.DrawRect(pad(r, 1), ink.Black)
 		drawLeftString(r, c.label, 40)
 		m.rows = append(m.rows, menuRow{rect: r, choice: c})
 		y += rowH
 	}
+}
+
+// TapVariantToggle handles a tap on the Vanlig/Omvänd toggle. Returns true
+// (and updates the selected variant) if the tap hit one of the two buttons.
+func (m *Menu) TapVariantToggle(p image.Point) bool {
+	if p.In(m.variantBtns[0]) {
+		m.variant = game.VariantNormal
+		return true
+	}
+	if p.In(m.variantBtns[1]) {
+		m.variant = game.VariantAnti
+		return true
+	}
+	return false
 }
 
 func (m *Menu) HandleTouch(p image.Point) (menuChoice, bool) {
@@ -412,6 +449,7 @@ var rulesParagraphs = []string{
 	"Du måste dra om du kan. Kan du inte, hoppas din tur över. Kan ingen dra är partiet slut.",
 	"Prickarna på brädet visar dina tillåtna drag. Fylld bricka = Svart, ring = Vit.",
 	"Tips: hörnen kan aldrig vändas — de är guld värda. Var försiktig med rutorna precis intill ett tomt hörn.",
+	"Omvänd Othello: samma spelregler, men den som har FÄRST brickor när partiet är slut vinner istället. Hörnen blir då en fälla att undvika, inte guld värda. Välj läge på menyn innan ni startar.",
 }
 
 // DrawRules renders the scrolling rules text with a back button and returns the

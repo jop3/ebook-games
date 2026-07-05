@@ -27,6 +27,12 @@ playtest/_shots/
 go.work
 go.work.sum
 
+# Runtime save/persistence files a game writes next to its own binary (cwd is
+# chdir'd there in main); playtest runs from the module root so these can leak
+# into the working tree during local `go test`/`playtest/play.sh` runs.
+*.sav
+*_best.txt
+
 # OS
 .DS_Store
 Thumbs.db

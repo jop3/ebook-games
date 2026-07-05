@@ -41,8 +41,12 @@ func evaluate(b *Board, player Cell) int {
 }
 
 // BestMove returns the AI's chosen move for player at the given search depth.
-// ok is false only if player has no legal moves.
-func BestMove(b *Board, player Cell, depth int) (move [2]int, ok bool) {
+// ok is false only if player has no legal moves. In VariantAnti ("Omvänd
+// Othello") the leaf evaluation is sign-flipped (see evalSign), so the same
+// negamax search that normally maximises the mover's advantage instead
+// maximises their disadvantage — the AI plays toward giving discs away and
+// avoiding corners/mobility, the cheap approximation of "fewest discs wins".
+func BestMove(b *Board, player Cell, depth int, variant Variant) (move [2]int, ok bool) {
 	moves := b.LegalMoves(player)
 	if len(moves) == 0 {
 		return move, false
@@ -50,11 +54,12 @@ func BestMove(b *Board, player Cell, depth int) (move [2]int, ok bool) {
 	if depth < 1 {
 		depth = 1
 	}
+	sign := evalSign(variant)
 	best := negInf
 	for _, m := range moves {
 		child := *b
 		child.Apply(m[0], m[1], player)
-		score := -negamax(&child, player.Opponent(), player, depth-1, negInf, posInf)
+		score := -negamax(&child, player.Opponent(), player, depth-1, negInf, posInf, sign)
 		if score > best {
 			best = score
 			move = m
@@ -64,27 +69,36 @@ func BestMove(b *Board, player Cell, depth int) (move [2]int, ok bool) {
 	return move, ok
 }
 
+// evalSign returns -1 for VariantAnti (flip the leaf evaluation so the search
+// pursues fewer discs instead of more) and +1 for normal Othello.
+func evalSign(variant Variant) int {
+	if variant == VariantAnti {
+		return -1
+	}
+	return 1
+}
+
 // negamax searches to the given depth. toMove is the side to move; root is the
 // player we're scoring for. Passing is handled by recursing with the same board
 // for the opponent; if neither can move, we score the terminal position.
-func negamax(b *Board, toMove, root Cell, depth, alpha, beta int) int {
+func negamax(b *Board, toMove, root Cell, depth, alpha, beta, sign int) int {
 	if depth == 0 {
-		return signedEval(b, toMove, root)
+		return signedEval(b, toMove, root, sign)
 	}
 	moves := b.LegalMoves(toMove)
 	if len(moves) == 0 {
 		if !b.HasMove(toMove.Opponent()) {
 			// Terminal: no one can move.
-			return signedEval(b, toMove, root)
+			return signedEval(b, toMove, root, sign)
 		}
 		// Pass: opponent moves, no depth spent double (still costs a ply).
-		return -negamax(b, toMove.Opponent(), root, depth-1, -beta, -alpha)
+		return -negamax(b, toMove.Opponent(), root, depth-1, -beta, -alpha, sign)
 	}
 	best := negInf
 	for _, m := range moves {
 		child := *b
 		child.Apply(m[0], m[1], toMove)
-		score := -negamax(&child, toMove.Opponent(), root, depth-1, -beta, -alpha)
+		score := -negamax(&child, toMove.Opponent(), root, depth-1, -beta, -alpha, sign)
 		if score > best {
 			best = score
 		}
@@ -98,7 +112,8 @@ func negamax(b *Board, toMove, root Cell, depth, alpha, beta int) int {
 	return best
 }
 
-// signedEval returns evaluate() from toMove's perspective (negamax convention).
-func signedEval(b *Board, toMove, root Cell) int {
-	return evaluate(b, toMove)
+// signedEval returns evaluate() from toMove's perspective (negamax
+// convention), scaled by sign (-1 in VariantAnti to pursue fewer discs).
+func signedEval(b *Board, toMove, root Cell, sign int) int {
+	return sign * evaluate(b, toMove)
 }
