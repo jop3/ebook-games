@@ -275,6 +275,78 @@ func TestPlayOthelloFullGameVsAI(t *testing.T) {
 	}
 }
 
+// --- Anti-Othello ("Omvänd Othello") variant --------------------------------
+
+// TestPlayOthelloAntiVariant plays a full game with the Omvänd toggle
+// selected on the menu and asserts, from an INDEPENDENT disc count (not by
+// trusting GameState.Winner() itself), that the banner declares the side
+// with FEWER discs the winner — the reversed win condition — and that the
+// AI (which plays White) respects the same reversed objective rather than
+// silently reverting to normal Othello's play.
+func TestPlayOthelloAntiVariant(t *testing.T) {
+	h, a := bootToMenu(t)
+
+	if !h.TapRect(a.menu.variantBtns[1]) { // "Omvänd"
+		t.Fatal("Omvänd toggle button not tappable")
+	}
+	if a.menu.variant != game.VariantAnti {
+		t.Fatal("tapping Omvänd did not select VariantAnti")
+	}
+
+	startMode(t, h, a, game.ModeAI)
+	if a.gs.Variant != game.VariantAnti {
+		t.Fatalf("started game has Variant=%v, want VariantAnti", a.gs.Variant)
+	}
+
+	// Human (Black) plays the "altruist" policy (fewest own flips), a
+	// reasonable real strategy under the reversed win condition; White is
+	// the in-game AI, which must itself be variant-aware (see game/ai_test.go
+	// for the unit-level proof of the sign flip).
+	for ply := 0; a.gs.Phase == game.PhasePlaying; ply++ {
+		if ply > 200 {
+			t.Fatal("anti-variant game did not terminate")
+		}
+		if a.gs.AITurn() {
+			t.Fatal("control returned on the AI's turn (deferred reply not drained)")
+		}
+		m, ok := bestByFlips(&a.gs.Board, a.gs.Turn, false)
+		if !ok {
+			t.Fatalf("human to move but no legal move at ply %d", ply)
+		}
+		tapCellXY(h, a, m[0], m[1])
+		if discTotal(&a.gs.Board) != 64 {
+			t.Fatalf("board inconsistent mid-game: %d", discTotal(&a.gs.Board))
+		}
+	}
+
+	bl := a.gs.Board.Count(game.Black)
+	wh := a.gs.Board.Count(game.White)
+	want := "Oavgjort!"
+	if bl < wh {
+		want = "Svart vinner!"
+	} else if wh < bl {
+		want = "Vit vinner!"
+	}
+	if _, ok := h.FindTextContains(want); !ok {
+		t.Fatalf("anti-variant end banner %q (fewest-discs-wins, B%d/W%d) not shown; visible: %v",
+			want, bl, wh, texts(h))
+	}
+	if _, ok := h.FindTextContains("Omvänd"); !ok {
+		t.Fatalf("status line should tag the active Omvänd variant; visible: %v", texts(h))
+	}
+}
+
+// TestPlayOthelloVanligIsStillTheDefault confirms the menu defaults to
+// normal Othello (most discs wins) when the toggle is never touched, so the
+// new variant toggle can't silently change existing behaviour.
+func TestPlayOthelloVanligIsStillTheDefault(t *testing.T) {
+	h, a := bootToMenu(t)
+	startMode(t, h, a, game.ModeHotseat)
+	if a.gs.Variant != game.VariantNormal {
+		t.Fatalf("default game Variant=%v, want VariantNormal", a.gs.Variant)
+	}
+}
+
 // --- Full hotseat game (drives BOTH colours) --------------------------------
 
 func TestPlayOthelloHotseatBothSides(t *testing.T) {
@@ -392,5 +464,29 @@ func TestPlayOthelloEndScreenshot(t *testing.T) {
 	}
 	if err := h.Screenshot(dir + "/othello_end.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
+	}
+}
+
+// TestPlayOthelloVariantScreenshots captures the menu (showing the new
+// Vanlig/Omvänd toggle) and the rules screen (showing the new paragraph),
+// for visual legibility review.
+func TestPlayOthelloVariantScreenshots(t *testing.T) {
+	dir := os.Getenv("PLAYTEST_SHOTS")
+	if dir == "" {
+		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
+	}
+	h, a := bootToMenu(t)
+	if err := h.Screenshot(dir + "/othello_menu.png"); err != nil {
+		t.Fatal(err)
+	}
+	h.TapRect(a.menu.variantBtns[1]) // Omvänd
+	if err := h.Screenshot(dir + "/othello_menu_omvand.png"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.TapText("Regler"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Screenshot(dir + "/othello_rules.png"); err != nil {
+		t.Fatal(err)
 	}
 }
