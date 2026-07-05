@@ -34,6 +34,17 @@ before starting a new game.
 | [kakuro](kakuro/) | Kakuro |
 | [nurikabe](nurikabe/) | Nurikabe |
 | [roborally](roborally/) | Robo Rally (simplified — 1 human vs 1–3 AI robots; program registers, race the checkpoints) |
+| [2048](2048/) | 2048 — sliding-tile swipe puzzle on a 4×4 grid, single player |
+| [goban](goban/) | Go (baduk/weiqi) — 9×9/13×13/19×19, area scoring, ko, mark-dead phase, 9×9 AI |
+| [hasami](hasami/) | Hasami shogi — custodial + corner capture; hot-seat or minimax AI |
+| [shong](shong/) | Shong — a 4×6 chess-like duel with a genuinely strong AI |
+| [munkar](munkar/) | Munkar — line-glyph placement with inverted capture (based on Donuts) |
+| [sushi](sushi/) | Sushi — card-drafting, 1 human vs 1–4 AI (based on Sushi Go!) |
+| [mosaik](mosaik/) | Mosaik — tile-drafting + wall-scoring, 2 players (based on Azul) |
+| [ringar](ringar/) | Ringar — ring-and-marker game on an 85-point hex board (based on YINSH) |
+| [hexa](hexa/) | Hexa — hex-tile mosaic, line up 6 of your own tiles (based on Six) |
+| [grottan](grottan/) | Grottan — tap-driven text adventure (a port of Colossal Cave) |
+| [studie](studie/) | En Studie i Grått — tap-driven locked-room mystery on the Grottan engine |
 | [screentest](screentest/) | Diagnostic app for screen/input debugging |
 
 ## Other apps
