@@ -262,9 +262,40 @@ func TestPlaySlitherlinkScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/slitherlink_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700)
+	_ = h.Screenshot(dir + "/slitherlink_menu.png")
+	h.TapRect(a.menu.RulesButton())
+	if a.screen == screenRules {
+		_ = h.Screenshot(dir + "/slitherlink_rules.png")
+		h.Back()
+	}
 	start(t, h, a, 0)
-	solveLoop(h, a)
+	// Draw only the horizontal loop edges: an in-progress board.
+	puz := a.gs.Puz
+	for y := 0; y < len(puz.SolutionH); y++ {
+		for x := 0; x < len(puz.SolutionH[y]); x++ {
+			if puz.SolutionH[y][x] {
+				tapH(h, a, x, y)
+			}
+		}
+	}
+	_ = h.Screenshot(dir + "/slitherlink_board.png")
+	// Close the loop with the vertical edges to win.
+	for y := 0; y < len(puz.SolutionV); y++ {
+		for x := 0; x < len(puz.SolutionV[y]); x++ {
+			if puz.SolutionV[y][x] {
+				tapV(h, a, x, y)
+			}
+		}
+	}
 	if err := h.Screenshot(dir + "/slitherlink_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
 	}

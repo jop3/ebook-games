@@ -1,64 +1,43 @@
-# En Studie i Grått — a tap-driven mystery (playable start to finish)
+# En Studie i Grått (`studie.app`)
 
-**En Studie i Grått** ("A Study in Grey") is an original locked-room mystery for
-the PocketBook Verse Pro, and the **second story on the Grottan adventure
-engine**. It is the worked example from `../SPEC_TEXT_ADVENTURE.md` §10d — a
-**complete, winnable case**, and a proof of the engine-reuse thesis:
+A tap-driven detective mystery: gather clues in the London fog and combine them in your notebook to crack a locked-room murder.
 
-> a themed story is **shared engine + one extension + authored data**, not a rewrite.
+<p align="center"><img src="screenshots/01_splash.png" width="300" alt="En Studie i Grått splash"></p>
 
-## The case, start to finish
+## About
 
-A man is found dead in a bolted study, no wound, a scent of bitter almonds. You
-have your consulting-rooms as a hub, a foggy street, the lodging-house (hall,
-study, bedroom, back yard), and — once you know to look — a chemist's shop and a
-cabman to question. Gather **nine clues** (physical evidence + three interviews),
-draw the **four deductions** (one, *the poison*, unlocks the chemist), then make
-the **accusation**: culprit, method, motive. A wrong pillar or an unproven charge
-is refused and named; the correct, fully-supported charge wins and plays the
-closing scene. It is winnable in one sitting.
+"En Studie i Grått" (A Study in Grey) is an original tap-driven mystery for the PocketBook Verse Pro, and the second story on the Grottan adventure engine — it reuses Grottan's engine byte-for-byte, adding one extension (the Notebook) plus authored story data and themed chrome. The case is an original story freely inspired by Sherlock Holmes' debut (A Study in Scarlet, 1887, which is public domain), but with its own text, characters and plot. There is no typing: everything is played by tapping. The case saves automatically, and you resume it with **Fortsätt fallet** from the menu.
 
-## What is reused vs. new
+## How to play
 
-| | Source | Notes |
-|---|---|---|
-| **Engine (reused verbatim)** | `story/model.go`, `story/engine.go`, `story/save.go` | **Byte-for-byte identical** to `grottan/story/*` (same sha256). Data model, State, New/Describe/Move/Act/IsDark/save — all shared, unchanged. |
-| **The one extension** | `story/notebook.go` | The Notebook / deduction system (spec §10b): clue collection + a `combine` table, built on the `Clues`/`Deductions` fields that were designed into `State` from the start. |
-| **Authored data** | `story/storydata.go` | ~6 hand-written rooms + clue objects of an original fog-bound case (fresh prose, no transcription). |
-| **Themed chrome** | `main.go`, `ui.go`, `vignettes.go` | A Notebook screen instead of a map; the "Blocket" button; splash motif (a magnifying glass over a boot-print); Swedish "Fallet" menu/rules; fog/gaslight vignettes drawn on the **shared `draw_toolkit.go`** (also copied verbatim). |
+- **Goal:** a man is dead in a locked room in the yellow fog. You are the detective — gather clues, weigh them against each other, and solve the case.
+- Tap an **exit** to move between locations.
+- Tap the verb **Undersök** (Examine) and then an **object** to inspect it; important findings are written into your notebook.
+- **Titta** (Look) and **Ryggsäck** (Backpack) act immediately.
+- Open the **notebook** (Blocket, top right), which lists your clues. Tap two of them to draw a **deduction** — if they fit, the picture clears; otherwise nothing happens. (For example, deducing the poison is what unlocks the chemist as a new location.)
+- Collect all the deductions to understand **how, why and by whom** the deed was done, then make your accusation (culprit / method / motive). An unsupported charge is refused and named; the correct, supported charge closes the case.
 
-The shared engine still carries a few cave-only hooks (the lamp, grate, and
-XYZZY magic word). Rather than fork the engine, this story defines those symbols
-as **inert sentinels** in `storydata.go` (negative ids that never match, all
-rooms lit so the darkness path never runs). A future cleanup could lift those
-hooks into per-story data so the engine is fully story-agnostic; the point of
-the scaffold is that it already runs on the identical engine source.
+## Screenshots
 
-## The loop
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/05_street.png" width="240"><br><sub>Out in the foggy street</sub></td>
+    <td align="center"><img src="screenshots/06_study.png" width="240"><br><sub>Examining the study</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/07_notebook.png" width="240"><br><sub>The notebook: combining clues into deductions</sub></td>
+    <td align="center"><img src="screenshots/09_accuse.png" width="240"><br><sub>Making the accusation</sub></td>
+  </tr>
+</table>
 
-Examine objects (tap **Undersök** then a **föremål**, or just tap the object) to
-record **ledtrådar** into the notebook. Open **Blocket** and tap **two clues**
-to draw a **slutsats** — matching pairs yield a deduction, others give "inget
-samband". The case has 3 deductions (how the killer entered, the motive, the
-timing).
+## Building
 
-## Status — a complete, winnable case
-
-Done: engine reuse; 8 rooms including three interview nodes; the full
-examine→notebook→combine→deduction loop; a lead that **unlocks a new area** (the
-poison deduction opens the chemist); the **accusation endgame** (culprit / method
-/ motive, with wrong-pillar and unproven-charge handling) and a resolution scene;
-themed chrome + fog/gaslight vignettes; save/restore. The whole case is played
-start to finish in the play test, screen by screen.
-
-**Remaining polish (optional):** a Swedish narration pass (prose is currently
-English, matching the repo pattern; UI chrome is already Swedish); more suspects /
-red-herring depth; and the launcher `.app` build + `view.json` entry, which need
-the Windows/WSL + Docker toolchain — see `../grottan/README.md`.
-
-## Verify (no device needed)
+Built against the PocketBook Go SDK — see the repo [README](../README.md), [POCKETBOOK_GAMEDEV_GUIDE.md](../POCKETBOOK_GAMEDEV_GUIDE.md) and [SPEC_TEXT_ADVENTURE.md](../SPEC_TEXT_ADVENTURE.md).
 
 ```bash
-cd studie && go test ./story/           # engine + notebook unit tests
-playtest/play.sh studie                 # full UI playthrough + screen renders
+docker run --rm -v "$PWD/studie:/app" -w /app sunsung/pocketbook-go-sdk:latest build -o studie.app .
 ```
+
+Copy `studie.app` into the device's `applications/` folder. Headless tests: `playtest/play.sh studie`.
+
+An original case freely inspired by A Study in Scarlet (Arthur Conan Doyle, 1887, public domain), with its own text, characters and plot.

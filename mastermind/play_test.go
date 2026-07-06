@@ -250,11 +250,35 @@ func TestPlayMastermindScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := newApp()
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/mastermind_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash
+	if a.scr != screenMenu {
+		t.Fatalf("splash tap did not open menu, scr=%v", a.scr)
+	}
+	_ = h.Screenshot(dir + "/mastermind_menu.png")
+
+	h.TapRect(a.rulesBtn.rect)
+	if a.scr == screenRules {
+		_ = h.Screenshot(dir + "/mastermind_rules.png")
+		h.Back()
+	}
+
+	// Normal player-guesses mode: enter one wrong guess so the board shows a
+	// scored row in progress.
 	startPreset(t, h, a, 0)
 	secret := append(Secret(nil), a.game.Secret...)
 	enterGuess(t, h, a, Guess(bump(secret, a.game.Cfg.Colors)))
 	submit(h, a)
+	_ = h.Screenshot(dir + "/mastermind_board.png")
+
+	// Guess the secret and win.
 	enterGuess(t, h, a, Guess(secret))
 	submit(h, a)
 	if err := h.Screenshot(dir + "/mastermind_win.png"); err != nil {

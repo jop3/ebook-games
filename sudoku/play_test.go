@@ -300,10 +300,36 @@ func TestPlaySudokuScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := newApp()
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/sudoku_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700)
+	_ = h.Screenshot(dir + "/sudoku_menu.png")
+	h.TapRect(a.menuRules)
+	if a.screen == screenRules {
+		_ = h.Screenshot(dir + "/sudoku_rules.png")
+		h.Back()
+	}
 	startDiff(t, h, a, game.Easy)
+	// Partially fill the first four rows: an in-progress board.
+	for r := 0; r < 4; r++ {
+		for c := 0; c < game.N; c++ {
+			if a.puzzle.Given[r][c] {
+				continue
+			}
+			selectCell(h, a, r, c)
+			tapNum(h, a, a.puzzle.Solution[r][c])
+		}
+	}
+	_ = h.Screenshot(dir + "/sudoku_board.png")
+	// Complete and confirm to win.
 	fillSolution(h, a)
-	tapAction(h, a, 2)
+	tapAction(h, a, 2) // Klar?
 	if err := h.Screenshot(dir + "/sudoku_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
 	}
