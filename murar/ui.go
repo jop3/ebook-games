@@ -532,17 +532,16 @@ func splitWords(s string) []string {
 // rulesParagraphs is the rules text for Murar (Quoridor), one entry per
 // paragraph.
 var rulesParagraphs = []string{
-	"Mål: bli först med att nå en valfri ruta på motsatta kortsidan av brädet — den sida som ligger mitt emot din egen startsida.",
-	"Brädet är 9x9. Varje spelare har en pjäs som börjar mitt på sin egen kortsida, och ett förråd på 10 murar. Svart börjar.",
-	"På din tur gör du EN av två saker: flyttar din pjäs, eller bygger en mur.",
-	"Flytta pjäs: ett steg rakt — upp, ner, vänster eller höger — till en angränsande ruta som inte är blockerad av en mur.",
-	"Hoppa över motståndaren: står motståndarens pjäs precis intill din, i den riktning du vill gå, och rutan direkt bortom motståndaren är ledig och inte murblockerad, hoppar du rakt över till den rutan.",
-	"Diagonalt hopp (undantaget): är rutan bortom motståndaren istället blockerad — av en mur, eller för att den ligger utanför brädet eftersom motståndaren står vid sin egen bortre kant — får du istället kliva diagonalt till någon av de två rutor som ligger jämte motståndarens pjäs, förutsatt att de är lediga och inte murblockerade.",
-	"Bygg mur: en mur är två rutor lång och läggs i skårorna mellan rutorna, vågrätt eller lodrätt. Den får inte överlappa eller korsa en mur som redan ligger i samma skärningspunkt.",
-	"En mur får ALDRIG placeras så att den stänger av varenda väg till målet för någon av spelarna — vare sig motståndarens eller din egen. Ett sådant drag är helt enkelt inte tillåtet och kan inte genomföras.",
-	"Vinst: först till motsatta kortsidan vinner omedelbart.",
-	"Tryck på \"Bygg mur\" / \"Flytta pjäs\" för att växla läge. I murläge: tryck i en skärningspunkt för att förhandsgranska en mur där, tryck en gång till på samma ställe för att bygga den — eller tryck \"Rotera\" för att vända förhandsvisningen mellan vågrät och lodrät innan du bygger. Ogiltiga placeringar bekräftas aldrig; brädet visar bara en kort streckad markering.",
-	"Datorn (Lätt/Medel/Svår) spelar okej men är inte perfekt: den värderar drag efter avstånd till mål och överväger bara de murar som ligger nära motståndarens just nu kortaste väg — inte varenda tänkbar mur på brädet.",
+	"Mål: nå en valfri ruta på motsatta kortsidan av brädet — sidan mitt emot din egen startsida.",
+	"Brädet är 9x9. Varje spelare har en pjäs, centrerad på sin egen kortsida, och 10 murar i förråd. Svart börjar.",
+	"Varje tur gör du EN sak: flyttar din pjäs, eller bygger en mur.",
+	"Flytta pjäs: ett steg rakt — upp, ner, vänster eller höger — till en ledig ruta som inte är murblockerad.",
+	"Hoppa över motståndaren: står motståndaren precis intill dig i den riktning du vill gå, och rutan bortom är ledig och inte murblockerad, hoppar du dit direkt.",
+	"Diagonalt hopp (undantaget): är rutan bortom istället blockerad — av en mur, eller för att motståndaren står vid bordets bortre kant — kliver du diagonalt till en ledig, icke murblockerad ruta jämte motståndaren istället.",
+	"Bygg mur: två rutor lång, i skåran mellan rutorna, vågrätt eller lodrätt. Får inte överlappa eller korsa en mur som redan ligger i samma skärningspunkt — och får ALDRIG stänga av varenda väg till målet för någon spelare, vare sig din egen eller motståndarens.",
+	"Vinst: först till motsatta kortsidan vinner.",
+	"Tryck \"Bygg mur\"/\"Flytta pjäs\" för att växla läge. I murläge: tryck för att förhandsgranska en mur, tryck igen för att bygga den, eller \"Rotera\" för att vända den. Ogiltiga placeringar avvisas tyst.",
+	"Datorn (Lätt/Medel/Svår) spelar okej — inte perfekt. Den värderar drag efter avstånd till mål och överväger bara murar nära motståndarens just nu kortaste väg, inte varenda tänkbar mur.",
 }
 
 // DrawRules renders the scrolling rules text with a back button and returns the
