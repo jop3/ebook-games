@@ -127,7 +127,7 @@ func TestPlaySudokuSolveAllDifficulties(t *testing.T) {
 				t.Fatal("completed board is not solved")
 			}
 			tapAction(h, a, 2) // "Klar?"
-			if _, ok := h.FindTextContains("Ratt"); !ok {
+			if _, ok := h.FindTextContains("Rätt"); !ok {
 				t.Fatalf("solved board not confirmed; visible: %v", texts(h))
 			}
 		})

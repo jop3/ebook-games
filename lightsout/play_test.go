@@ -5,7 +5,7 @@ package main
 // Headless PLAYTHROUGH tests for Lights Out. They drive the real touch path and
 // check the gameplay against the rules as written (see rulesParagraphs in
 // ui.go): pressing a square toggles it AND its four orthogonal neighbours (fewer
-// at the edges), every board is solvable, "Losning" marks exactly the cells to
+// at the edges), every board is solvable, "Lösning" marks exactly the cells to
 // press, "Ny" reshuffles, and the goal is to turn every light off. There is no
 // loss condition. Runs under the pure-Go inkview emulator (playtest/play.sh).
 
@@ -174,7 +174,7 @@ func keys(m map[[2]int]bool) [][2]int {
 	return out
 }
 
-// --- RULE: "Losning" marks exactly the cells the solver would press ----------
+// --- RULE: "Lösning" marks exactly the cells the solver would press ----------
 
 func TestPlayLightsOutHintMatchesSolver(t *testing.T) {
 	h, a := bootToMenu(t)
@@ -184,7 +184,7 @@ func TestPlayLightsOutHintMatchesSolver(t *testing.T) {
 	if !ok {
 		t.Fatal("puzzle unsolvable")
 	}
-	h.TapRect(a.btnHint) // show "Losning"
+	h.TapRect(a.btnHint) // show "Lösning"
 	if !a.solved || a.solution == nil {
 		t.Fatal("hint did not turn on")
 	}

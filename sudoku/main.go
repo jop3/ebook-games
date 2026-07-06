@@ -187,13 +187,13 @@ func (a *app) check() {
 		if len(a.board.Conflicts()) > 0 {
 			a.message = "Konflikter markerade"
 		} else {
-			a.message = "Inte klar an"
+			a.message = "Inte klar än"
 		}
 		return
 	}
 	if a.board.IsSolved() {
-		a.message = "Ratt! Klart!"
+		a.message = "Rätt! Klart!"
 	} else {
-		a.message = "Fel nagonstans"
+		a.message = "Fel någonstans"
 	}
 }

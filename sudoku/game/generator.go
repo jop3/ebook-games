@@ -17,11 +17,11 @@ const (
 func (d Difficulty) String() string {
 	switch d {
 	case Easy:
-		return "Latt"
+		return "Lätt"
 	case Medium:
 		return "Medel"
 	case Hard:
-		return "Svar"
+		return "Svår"
 	default:
 		return "?"
 	}

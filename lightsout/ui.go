@@ -27,16 +27,16 @@ func (a *app) drawMenu() {
 	w, h := sz.X, usableH
 
 	centerText(a.fonts.title, h/6, "Lights Out", w)
-	centerText(a.fonts.medium, h/6+90, "Slack alla lampor", w)
+	centerText(a.fonts.medium, h/6+90, "Släck alla lampor", w)
 
 	// three size buttons stacked in the middle
 	labels := []struct {
 		n     int
 		label string
 	}{
-		{3, "3 x 3  (latt)"},
+		{3, "3 x 3  (lätt)"},
 		{5, "5 x 5  (klassisk)"},
-		{7, "7 x 7  (svar)"},
+		{7, "7 x 7  (svår)"},
 	}
 	bw := w * 3 / 5
 	bh := 130
@@ -83,7 +83,7 @@ func (a *app) drawPlay() {
 	topH := 150
 	if a.won {
 		a.fonts.big.SetActive(ink.Black)
-		msg := fmt.Sprintf("Lost pa %d tryck!", a.board.Moves)
+		msg := fmt.Sprintf("Löst på %d tryck!", a.board.Moves)
 		tw := ink.StringWidth(msg)
 		ink.DrawString(image.Pt((w-tw)/2, 60), msg)
 	} else {
@@ -107,7 +107,7 @@ func (a *app) drawPlay() {
 		label string
 	}{
 		{a.btnNew, "Ny"},
-		{a.btnHint, "Losning"},
+		{a.btnHint, "Lösning"},
 		{a.btnMenu, "Meny"},
 	} {
 		ink.DrawRect(b.r, ink.Black)
@@ -246,7 +246,7 @@ func (a *app) drawSplash() {
 	drawSplashMotif(box)
 
 	a.fonts.medium.SetActive(ink.DarkGray)
-	hint := "Tryck for att borja"
+	hint := "Tryck för att börja"
 	hw := ink.StringWidth(hint)
 	ink.DrawString(image.Pt((w-hw)/2, h*5/6), hint)
 }
@@ -283,12 +283,12 @@ func drawSplashMotif(box image.Rectangle) {
 // ---- rules ----
 
 var rulesParagraphs = []string{
-	"Mal: slack ALLA lampor pa spelplanen.",
-	"Nar du trycker pa en ruta vaxlar den mellan tand och slackt - och samma sak hander med dess fyra grannar: rutorna ovanfor, nedanfor, till vanster och till hoger.",
-	"En tand ruta ar fylld (svart), en slackt ruta ar tom. Trycken vid kanterna paverkar farre grannar.",
-	"Uppe visas drag-raknaren (antal tryck) och hur manga lampor som fortfarande lyser.",
-	"\"Losning\" markerar vilka rutor du ska trycka pa for att slacka allt; tryck igen for att dolja.",
-	"\"Ny\" blandar en ny bana i samma storlek. Alla banor gar alltid att losa.",
+	"Mål: släck ALLA lampor på spelplanen.",
+	"När du trycker på en ruta växlar den mellan tänd och släckt - och samma sak händer med dess fyra grannar: rutorna ovanför, nedanför, till vänster och till höger.",
+	"En tänd ruta är fylld (svart), en släckt ruta är tom. Tryck vid kanterna påverkar färre grannar.",
+	"Uppe visas dragräknaren (antal tryck) och hur många lampor som fortfarande lyser.",
+	"\"Lösning\" markerar vilka rutor du ska trycka på för att släcka allt; tryck igen för att dölja.",
+	"\"Ny\" blandar en ny bana i samma storlek. Alla banor går alltid att lösa.",
 	"Storlekar i menyn: 3x3, 5x5 och 7x7.",
 }
 

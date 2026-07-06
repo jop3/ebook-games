@@ -36,7 +36,7 @@ func menuButtonRect(i int) image.Rectangle {
 	return image.Rect(x, y, x+w, y+h)
 }
 
-var menuLabels = []string{"Latt", "Medel", "Svar"}
+var menuLabels = []string{"Lätt", "Medel", "Svår"}
 
 func (a *app) drawMenu() {
 	s := ink.ScreenSize()
@@ -48,7 +48,7 @@ func (a *app) drawMenu() {
 	ink.DrawString(image.Pt((s.X-tw)/2, H/6), title)
 
 	a.f.small.SetActive(ink.Black)
-	sub := "Valj svarighetsgrad"
+	sub := "Välj svårighetsgrad"
 	sw := ink.StringWidth(sub)
 	ink.DrawString(image.Pt((s.X-sw)/2, H/6+90), sub)
 
@@ -312,7 +312,7 @@ func (a *app) drawSplash() {
 	a.drawSplashMotif(box)
 
 	a.f.rules.SetActive(ink.DarkGray)
-	hint := "Tryck for att borja"
+	hint := "Tryck för att börja"
 	hw := ink.StringWidth(hint)
 	ink.DrawString(image.Pt((s.X-hw)/2, H*5/6), hint)
 }
@@ -364,13 +364,13 @@ func (a *app) drawSplashMotif(box image.Rectangle) {
 // --- Rules screen -----------------------------------------------------
 
 var rulesParagraphs = []string{
-	"Mal: fyll hela rutnatet sa att varje rad, varje kolumn och varje 3x3-box innehaller siffrorna 1-9 exakt en gang.",
-	"Vissa celler ar redan ifyllda (understrukna) - de ar fasta ledtradar och kan inte andras.",
-	"Tryck pa en cell for att markera den. Tryck sedan en siffra 1-9 for att fylla i den. Tryck samma siffra igen for att ta bort den.",
-	"Anteckningslage: tryck Anteckn for att slaa pa smaa anteckningar (pencil marks). Da fyller siffrorna i sma noteringar i cellen i stallet for en stor siffra - bra for att komma ihag mojliga val.",
+	"Mål: fyll hela rutnätet så att varje rad, varje kolumn och varje 3x3-box innehåller siffrorna 1-9 exakt en gång.",
+	"Vissa celler är redan ifyllda (understrukna) - de är fasta ledtrådar och kan inte ändras.",
+	"Tryck på en cell för att markera den. Tryck sedan en siffra 1-9 för att fylla i den. Tryck samma siffra igen för att ta bort den.",
+	"Anteckningsläge: tryck Anteckn för att slå på små anteckningar (pencil marks). Då fyller siffrorna i små noteringar i cellen i stället för en stor siffra - bra för att komma ihåg möjliga val.",
 	"Sudda tar bort siffran eller anteckningarna i den markerade cellen.",
-	"Klar? kontrollerar bradet: konflikter markeras, och nar allt ar ifyllt sags om losningen ar ratt.",
-	"Ny gar tillbaka till menyn dar du valjer svarighetsgrad: Latt, Medel eller Svar.",
+	"Klar? kontrollerar brädet: konflikter markeras, och när allt är ifyllt sägs om lösningen är rätt.",
+	"Ny går tillbaka till menyn där du väljer svårighetsgrad: Lätt, Medel eller Svår.",
 }
 
 // drawRules renders the full Swedish rules with a "Tillbaka" button, storing
