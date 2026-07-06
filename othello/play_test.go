@@ -453,8 +453,34 @@ func TestPlayOthelloEndScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	// Boot manually so we can grab the splash before it is dismissed.
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/othello_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	if a.screen != screenMenu {
+		t.Fatalf("splash tap did not open menu, screen=%v", a.screen)
+	}
 	startMode(t, h, a, game.ModeAI)
+
+	// Play a handful of moves for an in-progress board shot.
+	for i := 0; i < 8 && a.gs.Phase == game.PhasePlaying; i++ {
+		if a.gs.AITurn() {
+			break
+		}
+		m, ok := bestByFlips(&a.gs.Board, a.gs.Turn, true)
+		if !ok {
+			break
+		}
+		tapCellXY(h, a, m[0], m[1])
+	}
+	_ = h.Screenshot(dir + "/othello_board.png")
+
 	for a.gs.Phase == game.PhasePlaying {
 		m, ok := bestByFlips(&a.gs.Board, a.gs.Turn, true)
 		if !ok {

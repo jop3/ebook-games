@@ -316,7 +316,45 @@ func TestPlayQuartoScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, _ := buildTallRowWin(t, 0)
+	// Boot manually so we can grab the splash before it is dismissed.
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/quarto_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	if a.screen != screenMenu {
+		t.Fatalf("splash tap did not open menu, screen=%v", a.screen)
+	}
+	_ = h.Screenshot(dir + "/quarto_menu.png")
+
+	if err := h.TapText("Regler"); err != nil {
+		t.Fatal(err)
+	}
+	_ = h.Screenshot(dir + "/quarto_rules.png")
+	h.Back()
+
+	// In-progress board: a couple of pieces placed.
+	start(t, h, a, labelHotseat)
+	give(t, h, a, game.Piece(3))
+	place(t, h, a, 1, 1)
+	give(t, h, a, game.Piece(6))
+	place(t, h, a, 2, 2)
+	_ = h.Screenshot(dir + "/quarto_board.png")
+
+	// Reset via the menu and play a winning line for the end shot.
+	if err := h.TapText("Meny"); err != nil {
+		t.Fatal(err)
+	}
+	start(t, h, a, labelHotseat)
+	tall := []game.Piece{3, 5, 7, 9}
+	for i, x := range []int{0, 1, 2, 3} {
+		give(t, h, a, tall[i])
+		place(t, h, a, x, 0)
+	}
 	if err := h.Screenshot(dir + "/quarto_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
 	}

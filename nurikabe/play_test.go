@@ -291,8 +291,40 @@ func TestPlayNurikabeScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	// Boot manually so we can grab the splash before it is dismissed.
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/nurikabe_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	if a.screen != screenMenu {
+		t.Fatalf("splash tap did not open menu, screen=%v", a.screen)
+	}
+	_ = h.Screenshot(dir + "/nurikabe_menu.png")
+
+	h.TapRect(a.menu.RulesButton())
+	_ = h.Screenshot(dir + "/nurikabe_rules.png")
+	h.Back()
+
 	start(t, h, a, 0)
+
+	// Partial paint: the sea cells in the top half of the board (one tap each)
+	// for an in-progress shot.
+	for y := 0; y <= a.gs.Puz.H/2; y++ {
+		for x := 0; x < a.gs.Puz.W; x++ {
+			if !isSeed(a, x, y) && a.gs.Puz.Solution[y][x] {
+				tapCell(h, a, x, y)
+			}
+		}
+	}
+	_ = h.Screenshot(dir + "/nurikabe_board.png")
+
+	// Reset the partial work and paint the full solution for the win shot.
+	tapButton(t, h, a, "Rensa")
 	paintSolution(h, a)
 	if err := h.Screenshot(dir + "/nurikabe_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

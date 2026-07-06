@@ -290,8 +290,28 @@ func TestPlayNimScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	// Boot manually so we can grab the splash before it is dismissed.
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/nim_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	if a.screen != screenMenu {
+		t.Fatalf("splash tap did not open menu, screen=%v", a.screen)
+	}
+	_ = h.Screenshot(dir + "/nim_menu.png")
+
+	tapMenuID(t, h, a, "rules")
+	_ = h.Screenshot(dir + "/nim_rules.png")
+	h.Back()
+
 	startGame(t, h, a, game.Normal, game.SoloAI, 0)
+	_ = h.Screenshot(dir + "/nim_board.png")
+
 	for ply := 0; !a.gs.Over && ply < 100; ply++ {
 		if a.gs.Turn != 0 {
 			break
