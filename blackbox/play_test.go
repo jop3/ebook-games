@@ -232,10 +232,26 @@ func TestPlayBlackboxScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/blackbox_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	_ = h.Screenshot(dir + "/blackbox_menu.png")
+	if _, ok := h.FindText("Regler"); ok {
+		_ = h.TapText("Regler")
+		_ = h.Screenshot(dir + "/blackbox_rules.png")
+		h.Back()
+	}
+
 	start(t, h, a, 0)
 	fireEdge(h, a, 0)
 	fireEdge(h, a, 3)
+	_ = h.Screenshot(dir + "/blackbox_board.png") // probing phase, rays fired
 	tapButton(t, h, a, "Gissa atomer")
 	markAtoms(h, a)
 	tapButton(t, h, a, "Lämna in")

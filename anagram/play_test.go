@@ -274,7 +274,22 @@ func TestPlayAnagramScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := newApp()
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/anagram_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	_ = h.Screenshot(dir + "/anagram_menu.png")
+	if _, ok := h.FindText("REGLER"); ok {
+		_ = h.TapText("REGLER")
+		_ = h.Screenshot(dir + "/anagram_rules.png")
+		h.Back()
+	}
+
 	startRound(t, h, a)
 	centers := tileCenters(a)
 	sols := a.dict.AllSolutions(a.round.BaseWord(), game.MinWordLen)
@@ -286,7 +301,12 @@ func TestPlayAnagramScreenshot(t *testing.T) {
 		formWord(t, h, a, centers, w)
 		submit(t, h, a)
 	}
-	if err := h.Screenshot(dir + "/anagram.png"); err != nil {
+	if err := h.Screenshot(dir + "/anagram_play.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
+	}
+
+	// Give-up screen: the round result with the words that were missed.
+	if err := h.TapText("GE UPP"); err == nil {
+		_ = h.Screenshot(dir + "/anagram_result.png")
 	}
 }
