@@ -41,6 +41,8 @@ type device struct {
 
 	curFont  *Font
 	curColor color.Color
+	clip     image.Rectangle // active SetClip region; empty = no clipping
+	hasClip  bool
 
 	spans      []TextSpan // display list of text drawn since last clear-tracking
 	needsDraw  bool       // set by Repaint, consumed by the Harness
@@ -55,6 +57,25 @@ var dev = &device{
 	curColor: color.Black,
 }
 
+// reset returns the device to power-on state (white screen, default font/colour,
+// zeroed counters, no pending repaint). Boot calls this so each booted app gets
+// a fresh device, exactly as a freshly launched app does on hardware — without
+// it, counters and the framebuffer leak from one test's app into the next.
+// Caller must hold d.mu.
+func (d *device) reset() {
+	d.fb = nil // next canvas() reallocates and starts white
+	d.orient = Orientation0
+	d.curFont = nil
+	d.curColor = color.Black
+	d.clip = image.Rectangle{}
+	d.hasClip = false
+	d.spans = nil
+	d.needsDraw = false
+	d.drawCalls = 0
+	d.fullUpd = 0
+	d.partialUpd = 0
+}
+
 // SetScreenSize overrides the emulated screen geometry (default 1072x1448).
 // Emulator-only helper; the real SDK has no such function.
 func SetScreenSize(w, h int) {
@@ -62,6 +83,8 @@ func SetScreenSize(w, h int) {
 	defer dev.mu.Unlock()
 	dev.w, dev.h = w, h
 	dev.fb = nil // force reallocation on next draw
+	dev.clip = image.Rectangle{}
+	dev.hasClip = false
 }
 
 func (d *device) canvas() *image.RGBA {
@@ -74,11 +97,26 @@ func (d *device) canvas() *image.RGBA {
 }
 
 func fillWhite(img *image.RGBA) {
-	b := img.Bounds()
-	for y := b.Min.Y; y < b.Max.Y; y++ {
-		for x := b.Min.X; x < b.Max.X; x++ {
-			img.SetRGBA(x, y, color.RGBA{0xff, 0xff, 0xff, 0xff})
-		}
+	fillRGBA(img, img.Bounds(), color.RGBA{0xff, 0xff, 0xff, 0xff})
+}
+
+// fillRGBA fills r (clamped to img) by writing one pixel row and copying it to
+// the rest — orders of magnitude faster than per-pixel SetRGBA, which matters
+// because games clear and refill the whole 1072x1448 screen on every frame.
+func fillRGBA(img *image.RGBA, r image.Rectangle, c color.RGBA) {
+	r = r.Intersect(img.Bounds())
+	if r.Empty() {
+		return
+	}
+	rowLen := r.Dx() * 4
+	first := img.PixOffset(r.Min.X, r.Min.Y)
+	row := img.Pix[first : first+rowLen]
+	for x := 0; x < rowLen; x += 4 {
+		row[x], row[x+1], row[x+2], row[x+3] = c.R, c.G, c.B, c.A
+	}
+	for y := r.Min.Y + 1; y < r.Max.Y; y++ {
+		off := img.PixOffset(r.Min.X, y)
+		copy(img.Pix[off:off+rowLen], row)
 	}
 }
 

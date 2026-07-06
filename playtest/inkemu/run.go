@@ -41,19 +41,24 @@ type Harness struct {
 }
 
 // Boot binds app to the emulator, runs Init, and renders the first frame.
+// The device is reset first (white screen, zeroed counters) so booting a second
+// app in the same test binary starts from power-on state, and the first frame
+// is drawn unconditionally — on hardware the OS always delivers a show/draw
+// event after Init, whether or not the app called Repaint.
 func Boot(app App) (*Harness, error) {
 	if app == nil {
 		return nil, fmt.Errorf("ink.Boot: nil app")
 	}
 	dev.mu.Lock()
+	dev.reset()
 	dev.app = app
-	dev.spans = nil
 	dev.mu.Unlock()
 
 	if err := app.Init(); err != nil {
 		return nil, fmt.Errorf("app.Init: %w", err)
 	}
 	h := &Harness{app: app}
+	h.Draw()
 	h.drainRepaint()
 	return h, nil
 }
@@ -68,12 +73,20 @@ func (h *Harness) Draw() {
 	h.app.Draw()
 }
 
+// maxChainedRepaints bounds how many deferred frames one injected event may
+// trigger. Real chains are short (Othello's longest AI-pass sequence is tens of
+// frames); an app that is still asking to repaint after this many frames is
+// repainting unconditionally from Draw — an infinite loop on device.
+const maxChainedRepaints = 1000
+
 // drainRepaint renders frames until the app stops asking for more. Some games
 // do deferred work inside Draw (e.g. Othello computes the AI reply on the frame
 // AFTER the player's move, then calls Repaint again), so a single draw is not
-// enough. The cap guards against a game that repaints unconditionally.
+// enough. A runaway app — one that never stops requesting repaints — panics
+// instead of being silently cut off, so the test fails loudly on the stall the
+// harness exists to catch.
 func (h *Harness) drainRepaint() {
-	for i := 0; i < 200; i++ {
+	for i := 0; i < maxChainedRepaints; i++ {
 		dev.mu.Lock()
 		need := dev.needsDraw
 		dev.mu.Unlock()
@@ -82,6 +95,7 @@ func (h *Harness) drainRepaint() {
 		}
 		h.Draw()
 	}
+	panic(fmt.Sprintf("ink.Harness: app still requesting repaints after %d chained frames — Draw() is calling Repaint() unconditionally (infinite redraw loop on device)", maxChainedRepaints))
 }
 
 // Tap simulates a finger tap (pointer down then up) at p and re-renders if the
@@ -100,6 +114,19 @@ func (h *Harness) TapXY(x, y int) bool { return h.Tap(image.Pt(x, y)) }
 func (h *Harness) TapRect(r image.Rectangle) bool {
 	return h.Tap(image.Pt((r.Min.X+r.Max.X)/2, (r.Min.Y+r.Max.Y)/2))
 }
+
+// Touch simulates a tap delivered through the Touch event path (down then up)
+// instead of Pointer. Games implement Touch as a fallback for firmwares that
+// report touches this way; this lets a test exercise that path too.
+func (h *Harness) Touch(p image.Point) bool {
+	h.app.Touch(TouchEvent{Point: p, State: TouchDown})
+	handled := h.app.Touch(TouchEvent{Point: p, State: TouchUp})
+	h.drainRepaint()
+	return handled
+}
+
+// TouchXY is Touch with loose coordinates.
+func (h *Harness) TouchXY(x, y int) bool { return h.Touch(image.Pt(x, y)) }
 
 // Press sends a hardware key (down then up).
 func (h *Harness) Press(k Key) bool {
@@ -182,9 +209,14 @@ func (h *Harness) FullUpdates() int    { dev.mu.Lock(); defer dev.mu.Unlock(); r
 func (h *Harness) PartialUpdates() int { dev.mu.Lock(); defer dev.mu.Unlock(); return dev.partialUpd }
 func (h *Harness) DrawCount() int      { dev.mu.Lock(); defer dev.mu.Unlock(); return dev.drawCalls }
 
-// Frame returns the current framebuffer image (for a screenshot).
+// Frame returns a copy of the current framebuffer (for a screenshot or pixel
+// assertions). A copy, so the caller can't be surprised by a later Draw
+// mutating it, and can inspect it without holding the device lock.
 func (h *Harness) Frame() image.Image {
 	dev.mu.Lock()
 	defer dev.mu.Unlock()
-	return dev.canvas()
+	src := dev.canvas()
+	out := image.NewRGBA(src.Bounds())
+	copy(out.Pix, src.Pix)
+	return out
 }

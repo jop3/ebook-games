@@ -19,7 +19,8 @@ cgo vendor at test time; nothing tracked in git is modified.
 playtest/play.sh bullscows          # play one game's tests
 playtest/play.sh bullscows -v       # verbose
 playtest/play.sh othello TestPlayOthelloVsAI   # a specific test
-playtest/play.sh all                # every game that has a play_test.go
+playtest/play.sh all                # emulator self-tests + every game with a play_test.go
+playtest/play.sh emu                # just the emulator's own tests (playtest/inkemu)
 
 # screenshots a test asks for land here:
 PLAYTEST_SHOTS=$PWD/playtest/_shots playtest/play.sh all
@@ -82,24 +83,38 @@ rendering and rule logic.
 
 | Call | What it does |
 |---|---|
-| `ink.Boot(app) (*Harness, error)` | Bind app, run `Init()`, render first frame |
+| `ink.Boot(app) (*Harness, error)` | Reset the device, bind app, run `Init()`, render first frame |
 | `h.Tap(pt)` / `h.TapXY(x,y)` | Pointer-down+up at a point; auto-redraws on `Repaint` |
 | `h.TapRect(r)` | Tap the centre of a rect (a button/cell) |
+| `h.Touch(pt)` / `h.TouchXY(x,y)` | Same tap via the `Touch` event path (the games' fallback handler) |
 | `h.Press(key)` / `h.Back()` | Hardware key down+up (`h.Back()` = `KeyBack`) |
 | `h.Texts() []TextSpan` | Every string drawn in the last frame, with its box |
-| `h.FindText(s)` / `h.FindTextContains(sub)` | Locate an on-screen label |
+| `h.FindText(s)` / `h.FindTextContains(sub)` | Locate an on-screen label (case-folded, incl. Å/Ä/Ö) |
 | `h.TapText(s)` / `h.TapTextContains(sub)` | Tap a label by its text |
 | `h.Screenshot(path)` | Write the current framebuffer to a PNG |
-| `h.DrawCount()` / `h.FullUpdates()` | Frame/flush counters for assertions |
+| `h.Frame()` | A copy of the framebuffer, for pixel assertions |
+| `h.DrawCount()` / `h.FullUpdates()` / `h.PartialUpdates()` | Frame/flush counters for assertions |
 
 After every injected event the harness re-runs `Draw()` for as long as the app
 keeps calling `Repaint()`, so deferred work (e.g. Othello computing its AI reply
 on the *next* frame, or chained AI moves when the human must pass) settles before
-control returns.
+control returns. An app that *never* stops asking (calls `Repaint()`
+unconditionally from `Draw()` — an infinite redraw loop on device) panics the
+harness after 1000 chained frames, so the stall fails the test loudly.
+
+`Boot` matches hardware: the first frame is drawn whether or not `Init` called
+`Repaint` (the OS always sends a show event), and each `Boot` starts from
+power-on state (white screen, default font, zeroed counters), so several tests
+in one binary can't leak state into each other.
+
+The emulator has its own test suite (`playtest/inkemu/emu_test.go`) covering the
+device semantics above plus the drawing primitives, clipping (`SetClip` is
+honoured, as on device), and text-span recording — run it with
+`playtest/play.sh emu` (also included in `all`).
 
 ## What the shipped tests demonstrate
 
-**All 20 rule-based games have play suites (~125 `TestPlay*` functions).** Every
+**All rule-based games have play suites (32 games, ~250 `TestPlay*` functions).** Every
 game is won/solved through the real touch path, with its generator / AI / scoring
 invariants asserted and each written rule cross-checked against an independent
 computation. Run them all with `playtest/play.sh all`. Two games' solvers were

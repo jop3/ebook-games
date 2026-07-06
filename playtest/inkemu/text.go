@@ -9,6 +9,7 @@ package ink
 import (
 	"image"
 	"image/color"
+	"strings"
 	"sync"
 
 	"golang.org/x/image/font"
@@ -116,8 +117,13 @@ func DrawString(p image.Point, s string) {
 	m := face.Metrics()
 	ascent := m.Ascent.Ceil()
 	height := (m.Ascent + m.Descent).Ceil()
+	dst := dev.canvas()
+	if dev.hasClip {
+		// SubImage keeps the same coordinate space but bounds drawing to the clip.
+		dst = dst.SubImage(dev.clip.Intersect(dst.Bounds())).(*image.RGBA)
+	}
 	d := &font.Drawer{
-		Dst:  dev.canvas(),
+		Dst:  dst,
 		Src:  image.NewUniform(cl),
 		Face: face,
 		Dot:  fixed.P(p.X, p.Y+ascent),
@@ -155,25 +161,8 @@ func CharWidth(c rune) int {
 // SetTextStrength is a no-op in the emulator.
 func SetTextStrength(n int) {}
 
+// containsFold is a case-insensitive substring check. Unicode-aware: the games'
+// UI text is Swedish, so Å/Ä/Ö must fold to å/ä/ö.
 func containsFold(s, sub string) bool {
-	ls, lsub := toLower(s), toLower(sub)
-	if len(lsub) == 0 {
-		return true
-	}
-	for i := 0; i+len(lsub) <= len(ls); i++ {
-		if ls[i:i+len(lsub)] == lsub {
-			return true
-		}
-	}
-	return false
-}
-
-func toLower(s string) string {
-	b := []byte(s)
-	for i, c := range b {
-		if c >= 'A' && c <= 'Z' {
-			b[i] = c + 32
-		}
-	}
-	return string(b)
+	return strings.Contains(strings.ToLower(s), strings.ToLower(sub))
 }
