@@ -489,4 +489,29 @@ func TestPlayDomineringScreenshot(t *testing.T) {
 	if err := h.Screenshot(dir + "/dominering_board.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
 	}
+
+	// A finished game with the winner banner: build an endgame where V plays the
+	// last legal move and H is left with none, then capture the result.
+	h.Back()
+	setSize(h, game.SizeSmall)
+	startOpponent(t, h, a, game.OpponentHotseat, 0)
+	size := a.gs.Board.Size
+	rows := make([][]bool, size)
+	for y := range rows {
+		row := make([]bool, size)
+		for x := 1; x < size; x++ {
+			row[x] = true
+		}
+		if y < size-2 {
+			row[0] = true
+		}
+		rows[y] = row
+	}
+	a.gs.Board = game.BoardFromRows(rows)
+	a.gs.Turn = game.V
+	h.Draw()
+	tapMove(h, a, game.Move{A: image.Pt(0, size-2), B: image.Pt(0, size-1)})
+	if err := h.Screenshot(dir + "/dominering_win.png"); err != nil {
+		t.Fatalf("screenshot: %v", err)
+	}
 }

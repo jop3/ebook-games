@@ -366,9 +366,36 @@ func TestPlayBullsCowsWinScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+
+	// Splash first (before dismissing it).
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/bullscows_splash.png"); e != nil {
+		t.Fatalf("splash screenshot: %v", e)
+	}
+
+	// Menu.
+	h.TapXY(500, 700)
+	if a.screen != screenMenu {
+		t.Fatalf("tap on splash did not open menu, screen=%v", a.screen)
+	}
+	_ = h.Screenshot(dir + "/bullscows_menu.png")
+
+	// Rules screen, then back to the menu.
+	if err := h.TapText("Regler"); err == nil && a.screen == screenRules {
+		_ = h.Screenshot(dir + "/bullscows_rules.png")
+		_ = h.TapText("Tillbaka")
+	}
+
+	// In-progress board: classic 4-digit preset, one scored (wrong) guess.
 	secret := startPreset(t, h, a, 1)
 	enterAndGuess(t, h, a, rotate(secret))
+	_ = h.Screenshot(dir + "/bullscows_board.png")
+
+	// Won board.
 	enterAndGuess(t, h, a, secret)
 	if err := h.Screenshot(dir + "/bullscows_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

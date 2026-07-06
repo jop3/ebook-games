@@ -239,9 +239,36 @@ func TestPlayEinsteinScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, g := bootToMenu(t)
+	// Splash first (before dismissing it).
+	g := NewGame()
+	h, err := ink.Boot(g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/einstein_splash.png"); e != nil {
+		t.Fatalf("splash screenshot: %v", e)
+	}
+
+	// Menu.
+	h.TapXY(500, 700)
+	if g.scr != screenMenu {
+		t.Fatalf("splash tap did not open menu, scr=%v", g.scr)
+	}
+	_ = h.Screenshot(dir + "/einstein_menu.png")
+
+	// Rules screen, then back to the menu.
+	tapBtn(t, h, g, "rules")
+	if g.scr == screenRules {
+		_ = h.Screenshot(dir + "/einstein_rules.png")
+		h.Back()
+	}
+
+	// In-progress note grid: start an Easy puzzle and mark a few deductions.
 	startDifficulty(t, h, g, Easy)
 	solveViaUI(t, h, g)
+	_ = h.Screenshot(dir + "/einstein_board.png")
+
+	// Solved result banner.
 	tapBtn(t, h, g, "submit")
 	if err := h.Screenshot(dir + "/einstein_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

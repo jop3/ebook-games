@@ -287,8 +287,36 @@ func TestPlayKakuroScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/kakuro_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700)
+	_ = h.Screenshot(dir + "/kakuro_menu.png")
+	h.TapRect(a.menu.RulesButton())
+	if a.screen == screenRules {
+		_ = h.Screenshot(dir + "/kakuro_rules.png")
+		h.Back()
+	}
 	start(t, h, a, 0)
+	// Partially fill for an in-progress board: enter about half the cells.
+	g := a.gs.Puz.Grid
+	var cells [][2]int
+	for r := range g {
+		for c := range g[r] {
+			if g[r][c].Kind == game.KindEntry {
+				cells = append(cells, [2]int{r, c})
+			}
+		}
+	}
+	for _, rc := range cells[:len(cells)/2] {
+		setCell(t, h, a, rc[0], rc[1], g[rc[0]][rc[1]].Solution)
+	}
+	_ = h.Screenshot(dir + "/kakuro_board.png")
 	fillSolution(t, h, a)
 	if err := h.Screenshot(dir + "/kakuro_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

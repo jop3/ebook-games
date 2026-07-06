@@ -19,6 +19,7 @@ package main
 
 import (
 	"image"
+	"os"
 	"testing"
 
 	ink "github.com/dennwc/inkview"
@@ -476,5 +477,51 @@ func TestPlayLapptacketRulesScreen(t *testing.T) {
 	}
 	if a.screen != screenMenu {
 		t.Fatalf("Tillbaka button: screen = %v, want screenMenu", a.screen)
+	}
+}
+
+// --- Screenshot -------------------------------------------------------------
+
+func TestPlayLapptacketScreenshot(t *testing.T) {
+	dir := os.Getenv("PLAYTEST_SHOTS")
+	if dir == "" {
+		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
+	}
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/lapptacket_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash
+	if a.screen != screenMenu {
+		t.Fatalf("splash tap did not open menu, screen=%v", a.screen)
+	}
+	_ = h.Screenshot(dir + "/lapptacket_menu.png")
+
+	if h.TapRect(a.menu.RulesButton()) && a.screen == screenRules {
+		_ = h.Screenshot(dir + "/lapptacket_rules.png")
+		h.Back()
+	}
+
+	startOpponent(t, h, a, game.OpponentHotseat)
+	h.Draw()
+	_ = h.Screenshot(dir + "/lapptacket_board.png")
+
+	// Drive the whole hot-seat game to its natural end, then snapshot the
+	// final board with the winner banner.
+	turns := 0
+	for !a.gs.GameOver() {
+		turns++
+		if turns > 3000 {
+			t.Fatalf("game did not end after %d turns", turns)
+		}
+		driveOneTurn(t, h, a)
+	}
+	h.Draw()
+	if e := h.Screenshot(dir + "/lapptacket_end.png"); e != nil {
+		t.Fatalf("screenshot: %v", e)
 	}
 }

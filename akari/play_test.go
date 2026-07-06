@@ -258,8 +258,25 @@ func TestPlayAkariScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/akari_splash.png"); e != nil {
+		t.Fatalf("screenshot: %v", e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	_ = h.Screenshot(dir + "/akari_menu.png")
+	if _, ok := h.FindText("Regler"); ok {
+		_ = h.TapText("Regler")
+		_ = h.Screenshot(dir + "/akari_rules.png")
+		h.Back()
+	}
+
 	start(t, h, a, 0)
+	_ = h.Screenshot(dir + "/akari_board.png") // fresh, unsolved puzzle
+
 	bulbs, _ := game.SolveBulbs(a.gs.Board)
 	for y := 0; y < a.gs.Board.H; y++ {
 		for x := 0; x < a.gs.Board.W; x++ {

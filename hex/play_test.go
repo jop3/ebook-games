@@ -238,7 +238,25 @@ func TestPlayHexScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Screenshot(dir + "/hex_splash.png"); err != nil {
+		t.Fatal(err)
+	}
+	h.TapXY(500, 700)
+	if err := h.Screenshot(dir + "/hex_menu.png"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.TapText("Regler"); err == nil {
+		if err := h.Screenshot(dir + "/hex_rules.png"); err != nil {
+			t.Fatal(err)
+		}
+		h.Back()
+	}
+
 	start(t, h, a, labelHotseat7)
 	n := a.gs.Board.N
 	hi, fi := 0, 0
@@ -246,6 +264,12 @@ func TestPlayHexScreenshot(t *testing.T) {
 		if a.gs.Turn == game.Black {
 			tapCell(h, a, 3, hi)
 			hi++
+			if hi == 3 {
+				// A representative mid-game position: a partial chain.
+				if err := h.Screenshot(dir + "/hex_board.png"); err != nil {
+					t.Fatalf("screenshot: %v", err)
+				}
+			}
 		} else {
 			tapCell(h, a, 0, fi)
 			fi++

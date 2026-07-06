@@ -1,83 +1,44 @@
-# I rad
+# I rad (`irad.app`)
 
-En spelmotor för "X i rad"-spel till **PocketBook Verse Pro (PB634)**, byggd på
-[dennwc/inkview](https://github.com/dennwc/inkview).
+A configurable "in-a-row" engine — tic-tac-toe, Connect Four, Gomoku and more — for the PocketBook Verse Pro.
 
-Klassikerna är konfigurationer, inte separata implementationer: Tre i rad, Tre i
-kvarn, Fyra i rad, Fem i rad/Gomoku, vertikala varianter och hindervarianter.
+<p align="center"><img src="screenshots/irad_splash.png" width="300" alt="I rad splash"></p>
 
-## Spelare: 1–4
+## About
 
-I startmenyn finns en **Läge**-knapp som växlar mellan:
+"I rad" ("in a row") is a single engine that covers the whole line-up family: get X marks in an unbroken line to win, where X and the board shape are set by the chosen variant. Built-in variants range from 3x3 tic-tac-toe up to 13x13 five-in-a-row (Gomoku), including a Connect-Four-style drop board, a "three men's morris" moving variant, and boards with blocked cells. Play against a heuristic AI (in the vs-computer mode) or 2–4 players hot-seat, and build your own board with the "Anpassad" (custom) option.
 
-| Läge | Spelare |
-|---|---|
-| Mot AI | 1 människa + AI (heuristisk) |
-| 2 spelare | 2 människor, hot-seat |
-| 3 spelare | 3 människor, hot-seat |
-| 4 spelare | 4 människor, hot-seat |
+## How to play
 
-Markörer på den gråskaliga e-ink-skärmen: **X** (spelare 1), **O** (spelare 2),
-**△** (spelare 3), **□** (spelare 4). Vinst = `Vinstlängd` i rad för valfri
-spelare. AI används bara i tvåspelarläget; med 3–4 spelare är alla mänskliga.
+- **Goal:** be first to place the required number of your marks in an unbroken line — horizontal, vertical or diagonal. The count is in the variant's name (e.g. 3, 4 or 5 in a row).
+- **Marks:** Player 1 = X, 2 = O, 3 = triangle, 4 = square. Players take turns tapping an empty cell to place a mark.
+- **Menu:** pick a ready-made variant or build one with "Anpassad" (width, height, win length). The "Läge" (mode) button toggles between vs-computer and 2–4 players hot-seat. The AI is only used in the vs-computer mode; with 3–4 players everyone is human.
+- **Built-in variants:** Tre i rad (3x3), Tre i kvarn (3x3, 3 pieces each — a placement phase followed by sliding a stone to an adjacent empty), Fyra i rad (7x6 drop / Connect Four), Fem i rad and Fem i rad vertikal (Gomoku), and obstacle boards "Hinder – Korset" and "Hinder – Ramen" with blocked cells.
+- **Drop variants:** tapping anywhere in a column drops your stone to the lowest empty cell.
+- **Draw:** if the board fills with no winning line, the game is a draw.
+- **Controls:** tap a cell to place (or tap a column to drop); in moving variants tap your stone then an adjacent empty cell. "Byt variant" returns to the menu; "Spela igen" restarts a finished game.
 
-## Projektstruktur
+## Screenshots
 
-```
-irad/
-  main.go              ink.App: meny, spel-loop, AI-turer, e-ink-uppdatering
-  game/                ren regelmotor (ingen SDK/UI-koppling, enhetstestad)
-    board.go           Board, ValidMoves, Apply, CheckWin
-    state.go           GameState, turordning (2–4 spelare), tillståndsmaskin
-    ai.go              hot-baserad heuristik (endast 2-spelarläge)
-    presets.go         presettabell + hindermönster
-    *_test.go          14 enhetstester
-  ui/
-    layout.go          skärm- ⇄ cellkoordinater
-    render.go          ritrutiner (rutnät, X/O/△/□, status, knappar)
-    input.go           touch → Move (§8)
-    menu.go            startmeny: variant, läge, Anpassad-steppers
-  third_party/inkview/ vendrad SDK (via replace i go.mod)
-  .github/workflows/   moln-bygge av irad.app
-```
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/irad_board.png" width="240"><br><sub>Tre i rad in progress</sub></td>
+    <td align="center"><img src="screenshots/irad_win.png" width="240"><br><sub>Player 1 wins a column</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/irad_menu.png" width="240"><br><sub>Variant and mode selection</sub></td>
+    <td align="center"><img src="screenshots/irad_rules.png" width="240"><br><sub>In-app rules (Swedish)</sub></td>
+  </tr>
+</table>
 
-## Bygga `irad.app`
+## Building
 
-Binären är en cgo-ARM-binär som länkar mot `libinkview`. Det kräver
-PocketBook Go SDK:t, som distribueras som en Docker-image.
-
-### Alternativ A — i molnet (inget lokalt installerat)
-
-1. Pusha repot till GitHub.
-2. Gå till **Actions** → kör workflowen **Build irad.app** (startar även
-   automatiskt vid push).
-3. Ladda ner artefakten **irad-app**, packa upp → `irad.app`.
-
-### Alternativ B — lokalt med Docker
+Built against the PocketBook Go SDK — see the repo [README](../README.md) and [POCKETBOOK_GAMEDEV_GUIDE.md](../POCKETBOOK_GAMEDEV_GUIDE.md).
 
 ```bash
-docker run --rm -v "$PWD:/app" -w /app \
-  sunsung/pocketbook-go-sdk:latest build -o irad.app .
+docker run --rm -v "$PWD/irad:/app" -w /app sunsung/pocketbook-go-sdk:latest build -o irad.app .
 ```
 
-(Alternativa images: `dennwc/pocketbook-go-sdk`,
-`5keeve/pocketbook-go-sdk:6.3.0-b288-v1`.)
+Copy `irad.app` into the device's `applications/` folder. Headless tests: `playtest/play.sh irad`.
 
-## Installera på enheten
-
-1. Anslut PocketBooken via USB.
-2. Kopiera `irad.app` till mappen **`applications/`** på enhetens rot
-   (på den här datorn: `D:\applications\irad.app`).
-3. Mata ut säkert. På läsaren: **Appar → User Applications → irad**.
-
-## Utveckling / test
-
-Regelmotorn (`game/`) är ren Go och testas utan SDK:
-
-```bash
-go test ./game/
-```
-
-UI- och huvudpaketen kan type-checkas mot en pure-Go-stub av inkview när ingen
-C-toolchain finns (se utvecklingsanteckningar). Själva `.app`-länkningen sker
-bara i SDK-imagen.
+Based on the traditional m,n,k-game family (tic-tac-toe, Connect Four, Gomoku, three men's morris) — all in the public domain.

@@ -309,8 +309,25 @@ func TestPlayLightsOutWinScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := newApp()
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/lightsout_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash
+	_ = h.Screenshot(dir + "/lightsout_menu.png")
+
+	if e := h.TapText("Regler"); e == nil {
+		_ = h.Screenshot(dir + "/lightsout_rules.png")
+		h.Back()
+	}
+
 	startSize(t, h, a, 5)
+	_ = h.Screenshot(dir + "/lightsout_board.png") // fresh, all-lit puzzle
+
 	sol, _ := a.board.Solve()
 	for r := 0; r < a.size; r++ {
 		for c := 0; c < a.size; c++ {

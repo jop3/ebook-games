@@ -360,4 +360,15 @@ func TestPlay2048Screenshot(t *testing.T) {
 	if err := h.Screenshot(dir + "/2048_board.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
 	}
+
+	// Win banner: merge two 1024 tiles into 2048.
+	a.gs.Board = game.Board{}
+	a.gs.Board[0] = 1024
+	a.gs.Board[1] = 1024
+	h.Draw()
+	swipe(a, image.Pt(900, 700), image.Pt(200, 700)) // merge into 2048
+	h.Draw()
+	if err := h.Screenshot(dir + "/2048_win.png"); err != nil {
+		t.Fatalf("screenshot: %v", err)
+	}
 }

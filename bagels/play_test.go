@@ -247,9 +247,27 @@ func TestPlayBagelsScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/bagels_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	_ = h.Screenshot(dir + "/bagels_menu.png")
+	if _, ok := h.FindText("Regler"); ok {
+		_ = h.TapText("Regler")
+		_ = h.Screenshot(dir + "/bagels_rules.png")
+		h.Back()
+	}
+
 	secret := startPreset(t, h, a, 1)
+	// One wrong (all-Pico) guess in progress, showing the Fermi/Pico board.
 	enterAndGuess(t, h, a, rotate(secret))
+	_ = h.Screenshot(dir + "/bagels_board.png")
+	// Then guess the code for the win banner.
 	enterAndGuess(t, h, a, secret)
 	if err := h.Screenshot(dir + "/bagels_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

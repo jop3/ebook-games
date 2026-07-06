@@ -268,8 +268,49 @@ func TestPlayNonogramScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	// Boot manually so we can grab the splash before it is dismissed.
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/nonogram_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700) // dismiss splash -> menu
+	if a.screen != screenMenu {
+		t.Fatalf("splash tap did not open menu, screen=%v", a.screen)
+	}
+	_ = h.Screenshot(dir + "/nonogram_menu.png")
+
+	h.TapRect(a.menu.RulesButton())
+	_ = h.Screenshot(dir + "/nonogram_rules.png")
+	h.Back()
+
 	start(t, h, a, 0)
+
+	// Partial fill: about half of the solution cells, for an in-progress shot.
+	total := 0
+	for y := 0; y < a.gs.Puz.H; y++ {
+		for x := 0; x < a.gs.Puz.W; x++ {
+			if a.gs.Puz.Solution[y][x] {
+				total++
+			}
+		}
+	}
+	done := 0
+	for y := 0; y < a.gs.Puz.H && done*2 < total; y++ {
+		for x := 0; x < a.gs.Puz.W && done*2 < total; x++ {
+			if a.gs.Puz.Solution[y][x] {
+				tapCell(h, a, x, y)
+				done++
+			}
+		}
+	}
+	_ = h.Screenshot(dir + "/nonogram_board.png")
+
+	// Reset the partial work and solve fully for the win shot.
+	tapButton(t, h, a, "Rensa")
 	fillSolution(h, a)
 	if err := h.Screenshot(dir + "/nonogram_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

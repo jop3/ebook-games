@@ -234,8 +234,49 @@ func TestPlayHashiScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Screenshot(dir + "/hashiwokakero_splash.png"); err != nil {
+		t.Fatal(err)
+	}
+	h.TapXY(500, 700)
+	if err := h.Screenshot(dir + "/hashiwokakero_menu.png"); err != nil {
+		t.Fatal(err)
+	}
+	h.TapRect(a.menu.RulesButton())
+	if err := h.Screenshot(dir + "/hashiwokakero_rules.png"); err != nil {
+		t.Fatal(err)
+	}
+	h.Back()
+
+	// A fresh, unsolved puzzle: numbered islands, no bridges yet.
 	start(t, h, a, 0)
+	if err := h.Screenshot(dir + "/hashiwokakero_board.png"); err != nil {
+		t.Fatalf("screenshot: %v", err)
+	}
+
+	// Build roughly half the solution's bridges for an in-progress shot.
+	if sol, ok := game.SolveBridges(a.gs.Puz); ok {
+		var builds [][2]int
+		for k, v := range sol {
+			for n := 0; n < v; n++ {
+				builds = append(builds, k)
+			}
+		}
+		for _, b := range builds[:len(builds)/2] {
+			buildBridge(h, a, b[0], b[1])
+		}
+		if err := h.Screenshot(dir + "/hashiwokakero_progress.png"); err != nil {
+			t.Fatalf("screenshot: %v", err)
+		}
+		// Clear the partial network, then build the full solution cleanly.
+		a.gs.Reset()
+		h.Draw()
+	}
+
 	solveViaUI(h, a)
 	if err := h.Screenshot(dir + "/hashiwokakero_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
