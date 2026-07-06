@@ -1,87 +1,45 @@
-# Grottan — a tap-driven Colossal Cave for the PocketBook Verse Pro
+# Grottan (`grottan.app`)
 
-**Grottan** ("the cave") is a text-adventure port of *Colossal Cave Adventure*
-for the PB634, replacing the classic typed parser with a **tap verb + tap noun**
-interface (Scott-Adams two-word model). Tap an exit to move; arm a verb then tap
-a noun to act; discovered magic words appear under **Säg…**. The game auto-saves.
+Grottan ("the cave") — a tap-driven port of Colossal Cave Adventure for e-ink.
 
-This is **Phase 1** (see `../SPEC_TEXT_ADVENTURE.md` §2): the data-driven engine,
-the tap UI, save/restore, splash + rules, and the surface-world + first-cave
-subset of the game (well house → grate → debris room → Hall of Mists, with the
-lamp, keys, grate, cage/bird/rod, gold, and the XYZZY magic word). No dwarves,
-RNG, maze, or scoring yet — those are Phases 2–3.
+<p align="center"><img src="screenshots/01_splash.png" width="300" alt="Grottan splash"></p>
 
-## Layout
+## About
 
-```
-grottan/
-  main.go                  ink.App: event loop, screens, tap dispatch, autosave
-  ui.go                    drawing (imports ink): layout, splash, rules, menu
-  story/                   PURE engine — no ink import, unit-tested cgo-free
-    model.go               data types + State + New()
-    engine.go              IsDark/Describe/Exits/Move/Act/... (pure functions)
-    save.go                gob save/restore, version-guarded
-    storydata_gen.go       GENERATED from Open Adventure's adventure.yaml
-    engine_test.go         unit tests (scripted walk, take/drop, save round-trip)
-  play_test.go             //go:build playtest — screen renders + UI playthrough
-  third_party/inkview/     vendored SDK (cgo; used only for the device build)
-  THIRDPARTY.md            Open Adventure BSD-2 license + attribution
-```
+`grottan` is a tap-driven port of *Colossal Cave Adventure* for the PocketBook Verse Pro (PB634), built on the dennwc/inkview SDK. The classic game uses a typed parser, but typing on e-ink is miserable — so the parser is replaced with a tap-verb + tap-noun interface (the Scott-Adams two-word model, which Colossal Cave already fits). You explore the great cave full of passages, objects, and secrets: get down into the cave, find the gold nugget and other treasures, and learn the layout. The game auto-saves after every action. All rules live in an SDK-free `grottan/story` package whose world data is generated from Open Adventure's `adventure.yaml`, so the engine unit-tests without a device.
 
-The world data is **generated**, not hand-written: `scratchpad/advgen/` ingests
-`adventure.yaml` from a local Open Adventure checkout, keeps the Phase-1
-allow-list, rewrites travel that leaves the subset into "you can't go that way"
-messages, and emits `story/storydata_gen.go`. Regenerate when widening coverage:
+## How to play
 
-```bash
-go run ./scratchpad/advgen <path-to>/adventure.yaml grottan/story/storydata_gen.go
-```
+- **Goal:** explore Colossal Cave, descend into it, find the gold nugget and other treasures, and learn the ways. No text to type.
+- **Move:** tap an **exit** to go that way.
+- **Act:** tap a **verb** (e.g. *Ta* / Take) to arm it, then tap an **object** to perform the action. Tap the verb again to cancel.
+- *Titta* (Look) and *Ryggsäck* (Inventory) run immediately — they need no object.
+- Objects marked with • are ones you are carrying; the rest lie in the room.
+- **Säg…** (Say) shows magic words you have discovered — try them out.
+- The cave is dark: you need a lit lamp to see, or you may fall.
+- The game saves automatically after every move — choose **Fortsätt** (Continue) in the menu to resume. A **Karta** (Map) button shows the rooms you have explored.
 
-## Verify (no device needed)
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/04_room_start.png" width="240"><br><sub>The road outside the well house</sub></td>
+    <td align="center"><img src="screenshots/06_grate_unlocked.png" width="240"><br><sub>Unlocking the grate with the keys</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/14_misthall.png" width="240"><br><sub>The Hall of Mists, lamp lit</sub></td>
+    <td align="center"><img src="screenshots/12_map.png" width="240"><br><sub>The explored-cave map</sub></td>
+  </tr>
+</table>
+
+## Building
+
+Built against the PocketBook Go SDK — see the repo [README](../README.md) and [POCKETBOOK_GAMEDEV_GUIDE.md](../POCKETBOOK_GAMEDEV_GUIDE.md).
 
 ```bash
-# pure engine unit tests
-cd grottan && go test ./story/
-
-# full UI playthrough + every screen rendered to PNG (uses playtest/inkemu)
-PLAYTEST_SHOTS=$PWD/playtest/_shots playtest/play.sh grottan
+docker run --rm -v "$PWD/grottan:/app" -w /app sunsung/pocketbook-go-sdk:latest build -o grottan.app .
 ```
 
-The play suite drives the real tap UI (splash → menu → new game → well house →
-take lamp/keys → unlock grate → descend), asserts state at each step, renders
-splash/menu/rules/room/dark-room/worst-case/scrolled/say-popup screenshots, and
-fails if any text overflows the real 1340px drawable height (guide §5).
+Copy `grottan.app` into the device's `applications/` folder. Headless tests: `playtest/play.sh grottan`.
 
-## Build the device .app + install  (needs the Windows/WSL + Docker SDK toolchain)
-
-These steps require the cross-compile toolchain from `POCKETBOOK_GAMEDEV_GUIDE.md`
-§7–§8 and are **not** runnable in a headless/web container — hand them off to the
-dev machine:
-
-1. **Build the ARM binary** (guide §7):
-   ```bash
-   echo noviso | sudo -S -p "" docker run --rm \
-     -v "/mnt/c/github/Ny mapp/grottan:/app" -w /app \
-     sunsung/pocketbook-go-sdk:latest build -o grottan.app .
-   file grottan.app          # must say: ELF 32-bit LSB executable, ARM, EABI5
-   ```
-   (`go build` ignores `*_test.go`, and `play_test.go` is `//go:build playtest`,
-   so neither the play tests nor the emulator touch the device build.)
-
-2. **Icons**: make `grottan.bmp` + `grottan_f.bmp` (8-bit BMP, ≤128×106) from the
-   cave-mouth/grate motif via `scratchpad/mkicon/`, into `D:\applications\icons\`.
-
-3. **view.json @Games entry** (guide §8 recipe — absolute path, string-form
-   icons, key `U_grottan` name-matched to `grottan.app`, no `param`):
-   ```json
-   "U_grottan": {
-       "path": "/mnt/ext1/applications/grottan.app",
-       "title": "Grottan",
-       "icon": "/mnt/ext1/applications/icons/grottan.bmp",
-       "focused_icon": "/mnt/ext1/applications/icons/grottan_f.bmp"
-   }
-   ```
-   Add `"U_grottan"` to the `@Games` group and regenerate via `scratchpad/vjfinal`.
-
-4. Copy `grottan.app` to `D:\applications\`, `sync`, eject; the device re-reads
-   view.json on USB disconnect.
+Based on Colossal Cave Adventure by Will Crowther & Don Woods, via Open Adventure (Eric S. Raymond), BSD-2-Clause.

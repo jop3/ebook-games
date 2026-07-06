@@ -265,11 +265,26 @@ func TestPlayJottoScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/jotto_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700)
+	_ = h.Screenshot(dir + "/jotto_menu.png")
+	h.TapRect(a.menu.RulesButton())
+	if a.screen == screenRules {
+		_ = h.Screenshot(dir + "/jotto_rules.png")
+		h.Back()
+	}
 	secret := startGame(t, h, a)
 	for _, w := range validWordsExcept(secret, 2) {
 		guessWord(t, h, a, w)
 	}
+	_ = h.Screenshot(dir + "/jotto_board.png")
 	guessWord(t, h, a, secret)
 	if err := h.Screenshot(dir + "/jotto_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)

@@ -356,11 +356,26 @@ func TestPlayIradScreenshot(t *testing.T) {
 	if dir == "" {
 		t.Skip("set PLAYTEST_SHOTS to capture a screenshot")
 	}
-	h, a := bootToMenu(t)
+	a := &app{}
+	h, err := ink.Boot(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := h.Screenshot(dir + "/irad_splash.png"); e != nil {
+		t.Fatal(e)
+	}
+	h.TapXY(500, 700)
+	_ = h.Screenshot(dir + "/irad_menu.png")
+	if err := h.TapText("Regler"); err == nil {
+		_ = h.Screenshot(dir + "/irad_rules.png")
+		h.Back()
+	}
 	startPreset(t, h, a, ui.Mode2, 0)
-	for _, c := range [][2]int{{0, 0}, {1, 0}, {0, 1}, {1, 1}, {0, 2}} {
+	for _, c := range [][2]int{{0, 0}, {1, 0}, {0, 1}, {1, 1}} {
 		tapCell(h, a, c[0], c[1])
 	}
+	_ = h.Screenshot(dir + "/irad_board.png")
+	tapCell(h, a, 0, 2) // P1 completes column x=0 -> win
 	if err := h.Screenshot(dir + "/irad_win.png"); err != nil {
 		t.Fatalf("screenshot: %v", err)
 	}
