@@ -215,40 +215,23 @@ func drawGemPattern(box image.Rectangle, c game.Color, faint bool) {
 // drawGoldGlyph draws the wildcard/gold token symbol: a bold 6-point
 // asterisk (distinct from any of the 5 gem patterns and from the noble
 // marker triangle).
+// drawGoldGlyph draws the wildcard/gold token symbol: box filled solid
+// black with a bold white "G" — deliberately the only solid-black swatch in
+// the game, so gold never reads as a 6th gem color/pattern. Simpler and
+// more legible at these small sizes than a hand-drawn line glyph (an
+// earlier version drew a 3-line asterisk via hand-rolled trig, which
+// rendered as an illegible blob).
 func drawGoldGlyph(box image.Rectangle) {
-	cx, cy := centerOf(box)
-	r := box.Dx() / 2
-	if box.Dy()/2 < r {
-		r = box.Dy() / 2
+	ink.FillArea(box, ink.Black)
+	size := box.Dy() * 2 / 3
+	if size < 10 {
+		size = 10
 	}
-	r = r * 3 / 4
-	pt := func(angle float64) image.Point {
-		return image.Pt(cx+int(float64(r)*cos(angle)), cy+int(float64(r)*sin(angle)))
-	}
-	for i := 0; i < 3; i++ {
-		a := float64(i) * 1.0471975512 // 60 degrees in radians
-		ink.DrawLine(pt(a), pt(a+3.14159265), ink.Black)
-	}
+	gf := ink.OpenFont(ink.DefaultFontBold, size, true)
+	gf.SetActive(ink.White)
+	drawCenteredString(box, "G", size)
+	gf.Close()
 }
-
-// cos/sin: tiny fixed hand-rolled approximations (avoids importing math just
-// for 3 lines through a circle — good enough for a small decorative glyph).
-func cos(x float64) float64 {
-	// Bhaskara I approximation, accurate enough for a small glyph at this size.
-	for x < 0 {
-		x += 6.2831853072
-	}
-	for x > 6.2831853072 {
-		x -= 6.2831853072
-	}
-	if x > 3.14159265 {
-		return -cos(x - 3.14159265)
-	}
-	xx := x * (3.14159265 - x)
-	return (3.14159265*3.14159265 - 4*xx) / (3.14159265*3.14159265 + xx)
-}
-
-func sin(x float64) float64 { return cos(x - 1.5707963268) }
 
 // --- Layout ------------------------------------------------------------
 
@@ -264,7 +247,7 @@ const (
 	bankRowHeight     = 110
 	tableauRowHeight  = 163
 	tableauAreaHeight = tableauRowHeight * game.NumTiers
-	activePanelHeight = 310
+	activePanelHeight = 320
 	opponentHeight    = 90
 	buttonBarHeight   = 100
 )
@@ -759,7 +742,7 @@ func DrawActivePanel(l *Layout, gs *game.GameState, side int, f *Fonts, sel sele
 	// gap BETWEEN rows without reserving enough of it, which visibly
 	// overlapped the previous row's content).
 	const (
-		headerH   = 30
+		headerH   = 40
 		rowGap    = 6
 		tokRowH   = 64
 		labelGapH = 22 // caption height + its own padding, reserved before a row
@@ -767,11 +750,16 @@ func DrawActivePanel(l *Layout, gs *game.GameState, side int, f *Fonts, sel sele
 	)
 
 	headerR := image.Rect(sideMargin, area.Min.Y+4, area.Max.X-sideMargin, area.Min.Y+4+headerH)
-	f.Menu.SetActive(ink.Black)
+	f.Status.SetActive(ink.Black)
 	label := boardHeaderLabel(gs, side) + "   ·   Prestige " + itoa(p.Prestige)
-	drawLeftString(headerR, label, 30)
+	drawLeftString(headerR, label, 32)
 
-	// Tokens + gold row.
+	// Tokens + gold row. The count digits below each swatch use a small
+	// dedicated font, set once here — every draw call below (token, gold,
+	// bonus chips) inherits it since nothing else activates a font in
+	// between (an earlier version left the header's large font active,
+	// rendering the counts oversized and overflowing into the row below).
+	f.Tiny.SetActive(ink.Black)
 	tokY := headerR.Max.Y + rowGap
 	tokArea := image.Rect(sideMargin, tokY, area.Max.X-sideMargin, tokY+tokRowH)
 	n := int(game.NumColors) + 1
@@ -896,13 +884,13 @@ func DrawOpponentStrip(l *Layout, gs *game.GameState, side int, showOpp bool, f 
 	l.ShowOppBtn = btn
 
 	textArea := image.Rect(sideMargin, area.Min.Y, btn.Min.X-16, area.Max.Y)
-	f.Menu.SetActive(ink.Black)
+	f.Status.SetActive(ink.Black)
 	nameLine := playerLabel(gs, side) + "   ·   Prestige " + itoa(p.Prestige)
-	drawLeftString(image.Rect(textArea.Min.X, area.Min.Y+10, textArea.Max.X, area.Min.Y+40), nameLine, 28)
+	drawLeftString(image.Rect(textArea.Min.X, area.Min.Y+6, textArea.Max.X, area.Min.Y+42), nameLine, 30)
 	f.Tiny.SetActive(ink.Black)
 	infoLine := "Kort: " + itoa(len(p.Cards)) + "   ·   Reserverade: " + itoa(len(p.Reserved)) +
 		"   ·   Polletter: " + itoa(p.TokensTotal()) + "   ·   Adel: " + itoa(len(p.Nobles))
-	drawLeftString(image.Rect(textArea.Min.X, area.Min.Y+44, textArea.Max.X, area.Min.Y+64), infoLine, 20)
+	drawLeftString(image.Rect(textArea.Min.X, area.Min.Y+46, textArea.Max.X, area.Min.Y+70), infoLine, 20)
 }
 
 // --- Winner banner -----------------------------------------------------------
