@@ -24,21 +24,42 @@ func toRGBA(cl color.Color) color.RGBA {
 
 func setPx(x, y int, c color.RGBA) {
 	fb := dev.canvas()
-	if !(image.Point{x, y}).In(fb.Bounds()) {
+	p := image.Point{x, y}
+	if !p.In(fb.Bounds()) {
+		return
+	}
+	if dev.hasClip && !p.In(dev.clip) {
 		return
 	}
 	fb.SetRGBA(x, y, c)
 }
 
-// ClearScreen fills the current canvas with white.
+// clipped intersects r with the screen and the active clip region.
+// Caller must hold dev.mu.
+func clipped(r image.Rectangle) image.Rectangle {
+	r = r.Intersect(dev.canvas().Bounds())
+	if dev.hasClip {
+		r = r.Intersect(dev.clip)
+	}
+	return r
+}
+
+// ClearScreen fills the current canvas with white. Like the SDK it ignores the
+// clip region — it resets the whole screen buffer.
 func ClearScreen() {
 	dev.mu.Lock()
 	defer dev.mu.Unlock()
 	fillWhite(dev.canvas())
 }
 
-// SetClip is a no-op in the emulator (games use it only cosmetically).
-func SetClip(r image.Rectangle) {}
+// SetClip restricts subsequent drawing to r, like the SDK. Pass the full screen
+// rect to clear it.
+func SetClip(r image.Rectangle) {
+	dev.mu.Lock()
+	defer dev.mu.Unlock()
+	dev.clip = r
+	dev.hasClip = !r.Eq(image.Rectangle{Max: image.Pt(dev.w, dev.h)})
+}
 
 func DrawPixel(p image.Point, cl color.Color) {
 	dev.mu.Lock()
@@ -97,12 +118,7 @@ func DrawRect(r image.Rectangle, cl color.Color) {
 func FillArea(r image.Rectangle, cl color.Color) {
 	dev.mu.Lock()
 	defer dev.mu.Unlock()
-	c := toRGBA(cl)
-	for y := r.Min.Y; y < r.Max.Y; y++ {
-		for x := r.Min.X; x < r.Max.X; x++ {
-			setPx(x, y, c)
-		}
-	}
+	fillRGBA(dev.canvas(), clipped(r), toRGBA(cl))
 }
 
 // InvertArea inverts the pixels in a rectangle (used for selection highlights).
@@ -110,13 +126,12 @@ func InvertArea(r image.Rectangle) {
 	dev.mu.Lock()
 	defer dev.mu.Unlock()
 	fb := dev.canvas()
+	r = clipped(r)
 	for y := r.Min.Y; y < r.Max.Y; y++ {
-		for x := r.Min.X; x < r.Max.X; x++ {
-			if !(image.Point{x, y}).In(fb.Bounds()) {
-				continue
-			}
-			px := fb.RGBAAt(x, y)
-			fb.SetRGBA(x, y, color.RGBA{0xff - px.R, 0xff - px.G, 0xff - px.B, 0xff})
+		off := fb.PixOffset(r.Min.X, y)
+		row := fb.Pix[off : off+r.Dx()*4]
+		for x := 0; x < len(row); x += 4 {
+			row[x], row[x+1], row[x+2] = 0xff-row[x], 0xff-row[x+1], 0xff-row[x+2]
 		}
 	}
 }

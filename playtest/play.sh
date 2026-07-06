@@ -9,7 +9,8 @@
 #
 # Usage:
 #   playtest/play.sh <game> [test-regexp]   # one game, e.g. bullscows
-#   playtest/play.sh all                    # every game that has a *play_test.go
+#   playtest/play.sh all                    # emulator self-tests + every game with a *play_test.go
+#   playtest/play.sh emu                    # just the emulator's own tests (playtest/inkemu)
 #   playtest/play.sh <game> -v              # pass extra flags after the game
 #
 # Screenshots requested by a test (via PLAYTEST_SHOTS) land in playtest/_shots/.
@@ -49,10 +50,20 @@ EOF
   return $rc
 }
 
+run_emu() {
+  echo ">>> testing the emulator itself (playtest/inkemu)"
+  (cd "$EMU" && go test "$@")
+}
+
 main() {
   local target="${1:-all}"; shift || true
+  if [ "$target" = "emu" ]; then
+    run_emu "$@"
+    exit $?
+  fi
   if [ "$target" = "all" ]; then
     local failed=0 found=0
+    run_emu "$@" || failed=1
     for d in "$ROOT"/*/; do
       local g; g="$(basename "$d")"
       [ "$g" = "playtest" ] && continue
