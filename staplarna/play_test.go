@@ -261,8 +261,8 @@ func TestPlayStaplarnaCaptureNotMandatory(t *testing.T) {
 	clearBoard(a.gs)
 
 	center := game.Point{X: 0, Y: 0, Z: 0}
-	capturable := game.Point{X: 1, Y: -1, Z: 0}  // one direction: a capturable enemy
-	plainEmpty := game.Point{X: -1, Y: 1, Z: 0}  // opposite direction: empty
+	capturable := game.Point{X: 1, Y: -1, Z: 0} // one direction: a capturable enemy
+	plainEmpty := game.Point{X: -1, Y: 1, Z: 0} // opposite direction: empty
 	setStack(a.gs.Board, center, game.Black, game.Tott, [3]int{0, 0, 1})
 	setStack(a.gs.Board, capturable, game.White, game.Tott, [3]int{0, 0, 1})
 	h.Draw()
@@ -547,8 +547,12 @@ func TestPlayStaplarnaRulesScreen(t *testing.T) {
 	if a.screen != screenRules {
 		t.Fatalf("Regler did not open rules, screen=%v", a.screen)
 	}
-	if _, ok := h.FindTextContains("TZAAR"); !ok {
-		t.Fatalf("rules text missing the TZAAR credit; visible: %v", texts(h))
+	// "Kris Burm" is distinctive to the credit paragraph itself — unlike
+	// "TZAAR"/"Tzaar", which (case-insensitively) also matches the goal
+	// paragraph's piece-type mentions, this can't false-positive against the
+	// wrong paragraph.
+	if _, ok := h.FindTextContains("Kris Burm"); !ok {
+		t.Fatalf("rules text missing the Kris Burm/TZAAR credit; visible: %v", texts(h))
 	}
 	if _, ok := h.FindTextContains("INTE obligatoriskt"); !ok {
 		t.Fatalf("rules text missing the capture-not-mandatory rule; visible: %v", texts(h))

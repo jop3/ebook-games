@@ -304,15 +304,21 @@ func (a *app) tapMove(p image.Point) bool {
 			ink.Repaint()
 			return true
 		}
-		if st, occ := a.gs.Board.At(pt); occ && st.Owner == a.gs.Turn {
-			a.selected = pt // switch selection to another own stack
-			ink.Repaint()
-			return true
-		}
+		// Try the move FIRST: landing on one of the mover's own stacks is a
+		// legal merge in TZAAR, not just a "reselect" gesture -- checking
+		// "is this an own stack" before attempting Play would make merges
+		// unreachable by tap entirely. Only fall back to "switch selection to
+		// this other own piece" once Play confirms the destination is not
+		// actually a legal move for the current selection.
 		if a.gs.Play(a.selected, pt) {
 			a.hasSelection = false
 			a.updates++
 			a.checkAIPend()
+			ink.Repaint()
+			return true
+		}
+		if st, occ := a.gs.Board.At(pt); occ && st.Owner == a.gs.Turn {
+			a.selected = pt // not a legal destination -- switch selection instead
 			ink.Repaint()
 			return true
 		}

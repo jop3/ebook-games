@@ -27,7 +27,7 @@ type PieceType int
 const (
 	Tzaar  PieceType = iota // scarcest: 6 per side — losing your last one loses the game
 	Tzarra                  // 9 per side
-	Tott                     // most numerous: 15 per side
+	Tott                    // most numerous: 15 per side
 )
 
 // AllTypes lists the 3 piece types in a fixed (scarcest-first) order, used
