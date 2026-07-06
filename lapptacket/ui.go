@@ -644,16 +644,16 @@ func splitWords(s string) []string {
 // rulesParagraphs is the full Swedish rules text for Lapptäcket.
 var rulesParagraphs = []string{
 	"Mål: fyll ditt 9x9-täcke så effektivt som möjligt med lappar i olika former, köpta för knappar (pengar) och tid.",
-	"Turordning — VIKTIGAST AV ALLT: det är INTE turas om i vanlig mening. Den spelare vars markör på tidslinjen ligger LÄNGST BAK får alltid göra nästa drag. Står markörerna lika går spelare 1 först. Det betyder att samma spelare ibland får dra flera gånger i rad.",
-	"En tur: välj en av de tre närmaste lapparna i kön (längst till vänster i remsan), betala dess knapp-kostnad, lägg den var som helst på ditt eget täcke (valfri rotation/spegling) på tomma rutor — eller välj att avancera: flytta din egen markör till strax förbi motståndarens markör på tidslinjen och få 1 knapp per ruta du flyttade.",
-	"När du köper en lapp flyttas din markör också framåt på tidslinjen, lika många steg som lappens tidskostnad (T).",
-	"Inkomst: när din markör PASSERAR ELLER LANDAR PÅ en inkomstruta (markerad med en liten tagg under linjen) får du knappar motsvarande summan av inkomstvärdet (+N) på alla lappar du har lagt — även om du hoppar över flera inkomstrutor i samma drag räknas de alla.",
-	"Bonuslappar: några fasta platser på tidslinjen (markerade med små rutor ovanför linjen) ger en gratis 1x1-lapp värd +1 i permanent inkomst till den första spelare vars markör når eller passerar platsen. Den lappen måste placeras direkt någonstans på ditt täcke innan turordningen går vidare.",
-	"7x7-bonus: den första spelaren som fyller en hel 7x7-yta någonstans på sitt täcke får omedelbart +7 poäng. Detta kan bara hända EN gång totalt i hela spelet — inte en gång per spelare.",
-	"Spelet slutar när BÅDA spelarnas markörer har nått slutet av tidslinjen (ruta 53).",
-	"Slutpoäng = knappar i handen minus 2 poäng per tom ruta som återstår på ditt täcke, plus 7 om du tog 7x7-bonusen. Flest poäng vinner.",
-	"Tryck på en av de tre köpbara lapparna för att välja den, tryck Rotera för att vända/spegla den, tryck sedan på en tom ruta på ditt eget täcke för att lägga den där. Ljusa markeringar visar var den får plats.",
-	"Baserad på Patchwork av Uwe Rosenberg. Denna version använder en egen, påhittad uppsättning av 33 lappar (former, kostnader, tider och inkomster) — inte det riktiga spelets exakta bricklista.",
+	"Turordning — VIKTIGAST AV ALLT: det är INTE turas om. Den spelare vars markör ligger LÄNGST BAK på tidslinjen gör alltid nästa drag. Lika läge: spelare 1 går. Samma spelare kan alltså dra flera gånger i rad.",
+	"En tur: välj en av de tre närmaste lapparna i kön (till vänster i remsan), betala knapp-kostnaden, lägg lappen var som helst på ditt täcke (valfri rotation/spegling) på tomma rutor — eller avancera: flytta din markör till strax förbi motståndarens och få 1 knapp per ruta.",
+	"När du köper en lapp flyttas din markör framåt lika många steg som lappens tidskostnad (T). Varje lapp visar: K = knappkostnad, T = tidskostnad, +N = inkomst.",
+	"Inkomst: när din markör PASSERAR ELLER LANDAR PÅ en inkomstruta (tagg under linjen) får du knappar lika med summan av inkomst (+N) på alla dina lappar — flera rutor i samma drag ger flera utbetalningar.",
+	"Bonuslappar: fasta platser (rutor ovanför linjen) ger en gratis 1x1-lapp värd +1 inkomst till den förste som når/passerar platsen. Den läggs direkt på täcket innan turordningen går vidare.",
+	"7x7-bonus: den förste som fyller en hel 7x7-yta på sitt täcke får omedelbart +7 poäng — bara EN gång totalt i hela spelet, inte per spelare.",
+	"Spelet slutar när BÅDA markörerna nått slutet av tidslinjen (ruta 53).",
+	"Slutpoäng = knappar i handen minus 2 poäng per tom ruta på täcket, plus 7 om du tog 7x7-bonusen. Flest poäng vinner.",
+	"Tryck på en köpbar lapp för att välja den, tryck Rotera för att vända/spegla den, tryck sedan på en tom ruta på ditt täcke för att lägga den. Ljusa markeringar visar var den får plats.",
+	"Baserad på Patchwork av Uwe Rosenberg. Denna version använder en egen, påhittad uppsättning av 33 lappar — inte det riktiga spelets exakta bricklista.",
 }
 
 func DrawRules(screen image.Point, f *Fonts, title string, paragraphs []string) image.Rectangle {
@@ -661,29 +661,29 @@ func DrawRules(screen image.Point, f *Fonts, title string, paragraphs []string) 
 	H := usableH
 	W := screen.X
 
-	tf := ink.OpenFont(ink.DefaultFontBold, 52, true)
+	tf := ink.OpenFont(ink.DefaultFontBold, 46, true)
 	tf.SetActive(ink.Black)
 	tw := ink.StringWidth(title)
-	ink.DrawString(image.Pt((W-tw)/2, 44), title)
+	ink.DrawString(image.Pt((W-tw)/2, 30), title)
 	tf.Close()
 
-	margin := 40
-	bh := 104
+	margin := 30
+	bh := 92
 	bw := W / 2
 	r := image.Rect((W-bw)/2, H-margin-bh, (W+bw)/2, H-margin)
 	ink.DrawRect(r, ink.Black)
 	ink.DrawRect(pad(r, 1), ink.Black)
 	f.Button.SetActive(ink.Black)
-	drawCenteredString(r, "Tillbaka", 34)
+	drawCenteredString(r, "Tillbaka", 32)
 
-	body := ink.OpenFont(ink.DefaultFont, 27, true)
+	body := ink.OpenFont(ink.DefaultFont, 23, true)
 	body.SetActive(ink.Black)
-	bodyMargin := 44
+	bodyMargin := 40
 	maxW := W - 2*bodyMargin
-	y := 130
-	lineH := 35
-	paraGap := 14
-	limit := r.Min.Y - 16
+	y := 104
+	lineH := 29
+	paraGap := 8
+	limit := r.Min.Y - 12
 	for _, p := range paragraphs {
 		for _, ln := range wrapText(p, maxW) {
 			if y+lineH > limit {
