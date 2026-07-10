@@ -127,10 +127,12 @@ func (a *app) Touch(e ink.TouchEvent) bool {
 	return a.handleTap(e.Point)
 }
 
+// repaint queues a redraw. Draw() does its own ClearScreen + FullUpdate;
+// clearing/flushing here as well pushed a BLANK framebuffer to the e-ink
+// panel before the queued Draw ran — a white flash and a second full refresh
+// on every tap.
 func (a *app) repaint() {
-	ink.ClearScreen()
 	ink.Repaint()
-	ink.FullUpdate()
 }
 
 // --- game control -----------------------------------------------------
@@ -159,7 +161,12 @@ func (a *app) placeDigit(d int) {
 	a.showConf = false
 	a.message = ""
 	if a.noteMode {
-		a.notes[a.selR][a.selC] ^= 1 << uint(d)
+		// Notes only make sense in an empty cell — a filled cell doesn't
+		// render them, so a toggle here would silently set marks that pop
+		// into view when the digit is later cleared.
+		if a.board[a.selR][a.selC] == 0 {
+			a.notes[a.selR][a.selC] ^= 1 << uint(d)
+		}
 		return
 	}
 	if a.board[a.selR][a.selC] == d {

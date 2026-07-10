@@ -125,12 +125,17 @@ func NewLayout(screen image.Point) Layout {
 	return l
 }
 
+// CellToScreen maps board coordinates to the screen with the vertical axis
+// FLIPPED: board y=0 is Black's back rank, and the rules ("Svart börjar
+// nederst") put Black at the bottom of the screen — matching every sibling
+// game where the human's side is the near edge.
 func (l *Layout) CellToScreen(x, y int) image.Rectangle {
+	fy := game.Rows - 1 - y
 	return image.Rect(
 		l.GridOrigin.X+x*l.CellSize,
-		l.GridOrigin.Y+y*l.CellSize,
+		l.GridOrigin.Y+fy*l.CellSize,
 		l.GridOrigin.X+(x+1)*l.CellSize,
-		l.GridOrigin.Y+(y+1)*l.CellSize,
+		l.GridOrigin.Y+(fy+1)*l.CellSize,
 	)
 }
 
@@ -143,7 +148,7 @@ func (l *Layout) ScreenToCell(p image.Point) (x, y int, ok bool) {
 		return 0, 0, false
 	}
 	x = rel.X / l.CellSize
-	y = rel.Y / l.CellSize
+	y = game.Rows - 1 - rel.Y/l.CellSize // inverse of CellToScreen's flip
 	if x < 0 || x >= game.Cols || y < 0 || y >= game.Rows {
 		return 0, 0, false
 	}
@@ -438,11 +443,14 @@ func (m *Menu) Draw(screen image.Point, f *Fonts) {
 	rb := image.Rect((screen.X-rbW)/2, H-margin-rbH, (screen.X+rbW)/2, H-margin)
 	ink.DrawRect(rb, ink.Black)
 	ink.DrawRect(pad(rb, 1), ink.Black)
+	// Activate the long-lived menu font BEFORE drawing anything more: the
+	// `sub` font closed above must never be the active face when text is
+	// measured/drawn (use-after-free in the C library on device).
+	f.Menu.SetActive(ink.Black)
 	drawCenteredString(rb, "Regler", 40)
 	m.rulesBtn = rb
 
 	// Opponent rows fill the space between the subtitle and the Regler button.
-	f.Menu.SetActive(ink.Black)
 	rowH := 130
 	top := 300
 	bottom := rb.Min.Y - 30

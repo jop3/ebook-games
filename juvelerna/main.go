@@ -141,6 +141,14 @@ func (a *app) Draw() {
 				}
 				ink.Repaint()
 			}
+		} else if !a.gs.AITurn() && a.gs.CanPass() {
+			// Official-rules escape hatch: a player with NO legal action
+			// passes. The AI gets this via LegalActions; for the human we
+			// auto-pass with a message so a turn can never deadlock.
+			if a.gs.Pass() {
+				a.msg = "Inga drag möjliga — du passar"
+				a.finishStep()
+			}
 		}
 	case screenRules:
 		a.rulesBack = DrawRules(screenSize, a.fonts, "Juvelerna", rulesParagraphs)
@@ -426,14 +434,19 @@ func (a *app) handleButton(label string) bool {
 }
 
 func (a *app) confirmTake() bool {
-	if a.sel.kind != selBankColors || !a.sel.complete() {
+	if a.sel.kind != selBankColors || len(a.sel.bankColors) == 0 {
 		return false
 	}
 	var ok bool
-	if len(a.sel.bankColors) == 3 {
-		ok = a.gs.Take3([3]game.Color{a.sel.bankColors[0], a.sel.bankColors[1], a.sel.bankColors[2]})
-	} else {
+	if len(a.sel.bankColors) == 2 && a.sel.bankColors[0] == a.sel.bankColors[1] {
 		ok = a.gs.Take2(a.sel.bankColors[0])
+	} else {
+		// 3 distinct colors, or fewer when the bank has run dry (the
+		// official take-fewer fallback) — TakeColors enforces that taking
+		// fewer than the bank can supply stays illegal.
+		colors := make([]game.Color, len(a.sel.bankColors))
+		copy(colors, a.sel.bankColors)
+		ok = a.gs.TakeColors(colors)
 	}
 	return a.finishAction(ok, "Ogiltigt drag")
 }

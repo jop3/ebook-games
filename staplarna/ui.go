@@ -294,17 +294,6 @@ func DrawBoard(l *Layout, a *app) {
 		drawHexOutline(l.Center(p), l.Size)
 	}
 
-	// Legal destination hints for a selected stack (exact-distance landings).
-	if s.Phase == game.PhasePlaying && a.hasSelection {
-		hintR := l.Size * 3 / 10
-		if hintR < 2 {
-			hintR = 2
-		}
-		for _, to := range game.DestinationsFrom(s.Board, a.selected) {
-			fillCircle(l.Center(to), hintR, ink.LightGray)
-		}
-	}
-
 	for _, p := range l.order {
 		st, ok := s.Board.At(p)
 		if !ok {
@@ -314,6 +303,25 @@ func DrawBoard(l *Layout, a *app) {
 		drawTypeGlyph(cell, st.Type, st.Owner == game.Black)
 		if st.Height > 1 {
 			drawHeightBadge(cell, st.Height, a.fonts.Badge)
+		}
+	}
+
+	// Legal destination hints for a selected stack (exact-distance landings),
+	// drawn AFTER the pieces so hints on occupied cells stay visible: the
+	// glyphs are opaque and would fully cover a dot underneath, leaving
+	// capture/merge destinations looking unmarked. Empty landings get a grey
+	// dot; occupied ones a bold hex ring around the piece.
+	if s.Phase == game.PhasePlaying && a.hasSelection {
+		hintR := l.Size * 3 / 10
+		if hintR < 2 {
+			hintR = 2
+		}
+		for _, to := range game.DestinationsFrom(s.Board, a.selected) {
+			if _, occupied := s.Board.At(to); occupied {
+				drawBoldHex(l.Center(to), l.Size, 2)
+			} else {
+				fillCircle(l.Center(to), hintR, ink.LightGray)
+			}
 		}
 	}
 
