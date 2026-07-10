@@ -104,9 +104,24 @@ heuristics to alpha-beta and perfect play).
 | Folder | What it does |
 |---|---|
 | [lasordning](lasordning/) | **Läsordning** — reads the device's library DB and shows your books grouped into series, in reading order. |
+| [spelbutiken](spelbutiken/) | **Spelbutiken** — installs and updates all of the games *on the reader itself* from the latest GitHub release, over Wi-Fi. |
 | [screentest](screentest/) | A screen-boundary diagnostic used while building these apps. |
 
 ---
+
+## Installing on the reader — no computer needed
+
+Once [Spelbutiken](spelbutiken/) is on the device (a one-time, computer-free
+bootstrap: download `spelbutiken.install` from the
+[latest release](https://github.com/jop3/ebook-games/releases/latest) with the
+device browser, move + rename it to `applications/spelbutiken.app` with
+KOReader's file browser), every game installs and updates from the reader
+itself: open Spelbutiken → **Hämta listan** → **Installera allt**. Full
+walkthrough in [spelbutiken/README.md](spelbutiken/README.md).
+
+Releases are cut from the Actions tab (**Publish release** → run workflow with
+a version tag); the workflow builds every game's ARM `.app` and attaches them
+plus the Spelbutiken bootstrap to the release.
 
 ## Building
 
