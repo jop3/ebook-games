@@ -333,12 +333,14 @@ func drawButton(r image.Rectangle, label string, armed bool, f *ink.Font) {
 		f.SetActive(ink.Black)
 	}
 	// Fit the label; shrink obvious overflows by ellipsizing (guide §5a).
+	// Truncate by runes, not bytes, so a trimmed å/ä/ö can't leave invalid
+	// UTF-8 behind.
 	s := label
-	for ink.StringWidth(s) > r.Dx()-12 && len(s) > 1 {
-		s = s[:len(s)-1]
-	}
-	if s != label && len(s) > 1 {
-		s = s[:len(s)-1] + "…"
+	if rs := []rune(label); ink.StringWidth(s) > r.Dx()-12 {
+		for len(rs) > 1 && ink.StringWidth(string(rs)+"…") > r.Dx()-12 {
+			rs = rs[:len(rs)-1]
+		}
+		s = string(rs) + "…"
 	}
 	drawCentered(r, s, 30)
 	f.SetActive(ink.Black)
