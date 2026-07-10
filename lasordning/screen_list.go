@@ -88,7 +88,7 @@ func (v *listView) draw(screen image.Point, f *Fonts, g series.Grouped, loadErr 
 		f.Body.SetActive(ink.Black)
 		ink.DrawString(image.Pt(24, titleBarH+40), "Kunde inte läsa biblioteket:")
 		f.Small.SetActive(ink.DarkGray)
-		ink.DrawString(image.Pt(24, titleBarH+90), ellipsizeAt(f, loadErr.Error(), screen.X-48))
+		ink.DrawString(image.Pt(24, titleBarH+90), ellipsize(loadErr.Error(), screen.X-48))
 		return drawButtonBar(screen, f, []string{"Uppdatera"}, []string{"reload"})
 	}
 
@@ -135,20 +135,22 @@ func (v *listView) drawRow(r image.Rectangle, row listRow, f *Fonts, screenW int
 		f.Head.SetActive(ink.Black)
 		drawLeft(r, row.text, 40)
 	case rowSeries:
+		// Set the font BEFORE ellipsizing: ellipsize measures with the active
+		// face, and the same face must then draw the string.
 		f.Head.SetActive(ink.Black)
-		ink.DrawString(image.Pt(r.Min.X+24, r.Min.Y+14),
-			ellipsizeAt(f, "> "+row.text, screenW-48))
+		title := ellipsize("> "+row.text, screenW-48)
+		ink.DrawString(image.Pt(r.Min.X+24, r.Min.Y+14), title)
 		f.Small.SetActive(ink.DarkGray)
-		ink.DrawString(image.Pt(r.Min.X+48, r.Min.Y+62),
-			ellipsizeAt2(f, row.sub, screenW-72))
+		sub := ellipsize(row.sub, screenW-72)
+		ink.DrawString(image.Pt(r.Min.X+48, r.Min.Y+62), sub)
 		ink.DrawLine(image.Pt(r.Min.X, r.Max.Y), image.Pt(r.Max.X, r.Max.Y), ink.LightGray)
 	case rowStandalone:
 		f.Body.SetActive(ink.Black)
-		ink.DrawString(image.Pt(r.Min.X+24, r.Min.Y+14),
-			ellipsizeAt3(f, row.text, screenW-48))
+		title := ellipsize(row.text, screenW-48)
+		ink.DrawString(image.Pt(r.Min.X+24, r.Min.Y+14), title)
 		f.Small.SetActive(ink.DarkGray)
-		ink.DrawString(image.Pt(r.Min.X+24, r.Min.Y+62),
-			ellipsizeAt(f, row.sub, screenW-48))
+		sub := ellipsize(row.sub, screenW-48)
+		ink.DrawString(image.Pt(r.Min.X+24, r.Min.Y+62), sub)
 		ink.DrawLine(image.Pt(r.Min.X, r.Max.Y), image.Pt(r.Max.X, r.Max.Y), ink.LightGray)
 	}
 }
@@ -177,21 +179,6 @@ func (v *listView) seriesAt(p image.Point) (int, bool) {
 		}
 	}
 	return 0, false
-}
-
-// ellipsize helpers that set the right font active first, so width is measured
-// with the correct face.
-func ellipsizeAt(f *Fonts, s string, maxW int) string {
-	f.Small.SetActive(ink.DarkGray)
-	return ellipsize(s, maxW)
-}
-func ellipsizeAt2(f *Fonts, s string, maxW int) string {
-	f.Small.SetActive(ink.DarkGray)
-	return ellipsize(s, maxW)
-}
-func ellipsizeAt3(f *Fonts, s string, maxW int) string {
-	f.Body.SetActive(ink.Black)
-	return ellipsize(s, maxW)
 }
 
 func minInt(a, b int) int {

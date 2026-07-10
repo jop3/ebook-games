@@ -48,7 +48,6 @@ type app struct {
 	cache   *SeriesCache
 	appDir  string
 	buttons []Button
-	updates int // partial-update counter for periodic FullUpdate
 
 	downPt    image.Point // pointer-down position (for swipe detection)
 	downValid bool
@@ -113,18 +112,9 @@ func (a *app) Draw() {
 	case screenEdit:
 		a.buttons = a.edit.draw(screen, a.fonts)
 	}
-	a.periodicUpdate()
-}
-
-// periodicUpdate does a clean FullUpdate every few repaints to clear e-ink
-// ghosting, and a fast PartialUpdate otherwise.
-func (a *app) periodicUpdate() {
-	a.updates++
-	if a.updates%4 == 0 {
-		ink.FullUpdate()
-	} else {
-		ink.FullUpdate() // list/detail change wholesale; keep it simple and clean
-	}
+	// Screens change wholesale, so a clean FullUpdate every frame keeps
+	// e-ink ghosting away; nothing here needs a fast partial refresh.
+	ink.FullUpdate()
 }
 
 // --- input ------------------------------------------------------------------
@@ -221,8 +211,11 @@ func (a *app) tapList(p image.Point) bool {
 			case "reload":
 				a.reload()
 			case "syncall":
+				// Draw synchronously: a queued Repaint would only render
+				// AFTER this handler returns, i.e. after the long fetch —
+				// the progress text would never be seen.
 				a.list.status = "Hämtar alla serier…"
-				ink.Repaint()
+				a.Draw()
 				a.enrichAll()
 				a.list.status = "Sparat " + itoa(a.cache.Count()) + " serier offline"
 			}
@@ -286,8 +279,10 @@ func (a *app) tapDetail(p image.Point) bool {
 // caches it to disk (so it is available offline later), and rebuilds the merged
 // owned+missing rows.
 func (a *app) enrichDetail() {
+	// Draw synchronously so the progress text is visible during the fetch
+	// (a queued Repaint would only render after the handler returns).
 	a.detail.status = "Hämtar hela serien…"
-	ink.Repaint()
+	a.Draw()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -387,6 +382,23 @@ func seedTitles(books []series.Book) []string {
 	return out
 }
 
-// unused ink.App methods.
-func (a *app) Key(e ink.KeyEvent) bool            { return false }
+// Key makes the hardware Back button walk up one screen (edit -> detail ->
+// list), matching every game in the repo; from the list it stays unhandled so
+// the firmware exits the app.
+func (a *app) Key(e ink.KeyEvent) bool {
+	if e.State == ink.KeyStateUp && e.Key == ink.KeyBack {
+		switch a.screen {
+		case screenEdit:
+			a.screen = screenDetail
+			ink.Repaint()
+			return true
+		case screenDetail:
+			a.screen = screenList
+			ink.Repaint()
+			return true
+		}
+	}
+	return false
+}
+
 func (a *app) Orientation(o ink.Orientation) bool { return false }
