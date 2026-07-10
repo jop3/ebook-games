@@ -461,9 +461,20 @@ func stressLevel(self *Robot, pv publicView) float64 {
 	return s
 }
 
-// altCard picks a card type present in the hand to substitute in (best-effort).
+// altCard picks a card from the hand that the program hasn't already used up
+// (best-effort), so a fumble substitution can never plant a card beyond its
+// multiplicity in the hand — the invariant TestAIProducesLegalPrograms exists
+// to protect.
 func altCard(prog [5]Card, hand []Card) (Card, bool) {
+	used := map[Card]int{}
+	for _, c := range prog {
+		used[c]++
+	}
 	for _, c := range hand {
+		if used[c] > 0 {
+			used[c]--
+			continue
+		}
 		return c, true
 	}
 	return CardNone, false

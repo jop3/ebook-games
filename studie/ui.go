@@ -104,8 +104,10 @@ func (a *app) drawHeader(W int) {
 	// Room name, clipped so it never runs under the buttons.
 	a.fonts.Header.SetActive(ink.Black)
 	name := story.RoomName(a.st)
-	for ink.StringWidth(name) > book.Min.X-sideMargin-16 && len(name) > 1 {
-		name = name[:len(name)-1]
+	// Trim by runes, not bytes — a byte chop can split ö and leave invalid UTF-8.
+	for rs := []rune(name); ink.StringWidth(name) > book.Min.X-sideMargin-16 && len(rs) > 1; {
+		rs = rs[:len(rs)-1]
+		name = string(rs)
 	}
 	ink.DrawString(image.Pt(sideMargin, top.Min.Y+(headerH-40)/2), name)
 

@@ -124,7 +124,15 @@ func (s *GameState) moveMarker(player, delta int) {
 	}
 	for _, i := range crossedSpecialIndices(old, newPos, SpecialPatchPositions, s.ClaimedSpecial) {
 		s.ClaimedSpecial[i] = true
-		s.Pending[player]++
+		// Only take the free-patch obligation if the board can still hold
+		// it: Pending blocks every other action for this player and
+		// GameOver requires Pending==0, so an unplaceable 1x1 on a full
+		// board would soft-lock the whole game. (The AI additionally
+		// discards a stuck obligation in StepAI; this guards the human
+		// path at the source.)
+		if s.Pending[player] < s.Boards[player].EmptyCount() {
+			s.Pending[player]++
+		}
 	}
 	s.maybeFinish()
 }

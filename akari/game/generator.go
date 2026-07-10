@@ -14,10 +14,16 @@ import "math/rand"
 // if imperfect) so the app always starts.
 
 const (
-	wallDensityBase  = 0.22
-	wallDensityStep  = 0.05
-	maxOuterRounds   = 5  // widen wall density this many times
-	attemptsPerRound = 40 // fresh random layouts tried per density level
+	wallDensityBase = 0.22
+	wallDensityStep = 0.05
+	// 5 rounds x 40 attempts left ~5.6% of "Svår 14x14" boards falling
+	// through to the uncertified fallback (measured over 500 generations) —
+	// each one a shipped puzzle that may need guessing, contradicting the
+	// rules text's no-guessing promise. Twice the budget pushes that well
+	// under 1%; the extra cost only hits the unlucky tail, easy boards
+	// still accept within the first attempts.
+	maxOuterRounds   = 8  // widen wall density this many times
+	attemptsPerRound = 60 // fresh random layouts tried per density level
 )
 
 // Generate builds a puzzle board for the given preset.

@@ -44,7 +44,46 @@ func Load(r io.Reader) (*State, error) {
 		return nil, ErrBadSave
 	}
 	normalize(&s)
+	if !valid(&s) {
+		return nil, ErrBadSave
+	}
 	return &s, nil
+}
+
+// valid range-checks every location/object index in a decoded State against
+// THIS game's content tables. The version byte only certifies the gob layout;
+// a save from a sibling story engine (grottan/studie share the format) or one
+// written before a content edit decodes cleanly and then panics on the first
+// Locations[s.Loc] — bricking the app on every launch until the save file is
+// deleted by hand. Out-of-range saves are rejected as ErrBadSave instead, so
+// the caller falls back to a fresh game.
+func valid(s *State) bool {
+	locOK := func(l LocID) bool { return l >= 0 && int(l) < len(Locations) }
+	objOK := func(o ObjID) bool { return o >= 0 && int(o) < len(Objects) }
+	if !locOK(s.Loc) {
+		return false
+	}
+	for l := range s.Visited {
+		if !locOK(l) {
+			return false
+		}
+	}
+	for o := range s.Carried {
+		if !objOK(o) {
+			return false
+		}
+	}
+	for o, l := range s.ObjAt {
+		if !objOK(o) || !locOK(l) {
+			return false
+		}
+	}
+	for o := range s.ObjState {
+		if !objOK(o) {
+			return false
+		}
+	}
+	return true
 }
 
 // SaveBytes serializes s to a byte slice (convenient for tests and atomic writes).

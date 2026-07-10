@@ -91,13 +91,24 @@ func (s *GameState) SetDigit(row, col, v int) bool {
 	return true
 }
 
+// checkDone sets Done when every entry cell is filled and every run satisfies
+// its sum with no repeated digit. It deliberately does NOT compare against the
+// generator's own fill: the derived clue set isn't certified unique, so a
+// player who deduces a different fully valid fill must still win rather than
+// stare at a correct grid that never fires "Löst!".
 func (s *GameState) checkDone() {
 	for _, row := range s.Puz.Grid {
 		for _, c := range row {
-			if c.Kind == KindEntry && c.Value != c.Solution {
+			if c.Kind == KindEntry && c.Value == 0 {
 				s.Done = false
 				return
 			}
+		}
+	}
+	for _, run := range s.Puz.Runs {
+		if !RunOK(s.Puz, run) {
+			s.Done = false
+			return
 		}
 	}
 	s.Done = true
