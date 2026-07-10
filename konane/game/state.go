@@ -17,7 +17,7 @@ type Phase int
 
 const (
 	PhaseOpeningBlackRemove Phase = iota // Black removes one of the 2 center stones
-	PhaseOpeningWhiteRemove               // White removes a stone adjacent to the gap
+	PhaseOpeningWhiteRemove              // White removes a stone adjacent to the gap
 	PhasePlaying
 	PhaseDone
 )

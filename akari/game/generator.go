@@ -14,9 +14,9 @@ import "math/rand"
 // if imperfect) so the app always starts.
 
 const (
-	wallDensityBase = 0.22
-	wallDensityStep = 0.05
-	maxOuterRounds  = 5  // widen wall density this many times
+	wallDensityBase  = 0.22
+	wallDensityStep  = 0.05
+	maxOuterRounds   = 5  // widen wall density this many times
 	attemptsPerRound = 40 // fresh random layouts tried per density level
 )
 

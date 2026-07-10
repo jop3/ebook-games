@@ -619,6 +619,6 @@ func drawSplashMotif(box image.Rectangle) {
 	}
 
 	// Pawns in opposite corners.
-	drawMan(at(0, rows-1), true)       // Black, bottom-left
-	drawMan(at(cols-1, 0), false)      // White, top-right
+	drawMan(at(0, rows-1), true)  // Black, bottom-left
+	drawMan(at(cols-1, 0), false) // White, top-right
 }

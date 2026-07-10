@@ -110,7 +110,7 @@ func (a *app) drawMenu() {
 	// start button
 	bw, bh := 560, 130
 	bx := cx - bw/2
-	by := sz.Y*2/3
+	by := sz.Y * 2 / 3
 	a.button(a.fonts.button, rect(bx, by, bx+bw, by+bh), "SPELA", true, a.newRound)
 
 	// rules button opens the full rules screen

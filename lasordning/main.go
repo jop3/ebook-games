@@ -388,5 +388,5 @@ func seedTitles(books []series.Book) []string {
 }
 
 // unused ink.App methods.
-func (a *app) Key(e ink.KeyEvent) bool                 { return false }
-func (a *app) Orientation(o ink.Orientation) bool      { return false }
+func (a *app) Key(e ink.KeyEvent) bool            { return false }
+func (a *app) Orientation(o ink.Orientation) bool { return false }

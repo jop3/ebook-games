@@ -53,9 +53,9 @@ var Presets = []Preset{
 // Puzzle is a generated Kakuro board: the shape's block layout plus derived
 // clues and the hidden solution.
 type Puzzle struct {
-	W, H  int
-	Grid  [][]Cell // [row][col]
-	Runs  []Run
+	W, H int
+	Grid [][]Cell // [row][col]
+	Runs []Run
 }
 
 // GameState is a puzzle plus done-tracking.

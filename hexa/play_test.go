@@ -86,7 +86,7 @@ func clearBoard(gs *game.GameState) {
 // each filler is adjacent to its corresponding line cell, so it always
 // legally attaches to the growing cluster.
 func lineCells6() []game.Hex {
-	return []game.Hex{{-3, 3, 0}, {-2, 2, 0}, {-1, 1, 0}, {0, 0, 0}, {1, -1, 0}, {2, -2, 0}}
+	return []game.Hex{{X: -3, Y: 3, Z: 0}, {X: -2, Y: 2, Z: 0}, {X: -1, Y: 1, Z: 0}, {X: 0, Y: 0, Z: 0}, {X: 1, Y: -1, Z: 0}, {X: 2, Y: -2, Z: 0}}
 }
 
 // --- RULE: placement phase, real taps, adjacency + turn order --------------
@@ -98,7 +98,7 @@ func TestPlayHexaPlacementAdjacencyAndTurnOrder(t *testing.T) {
 	if a.gs.Phase != game.PhasePlacement || a.gs.Turn != game.Black {
 		t.Fatalf("game should start in placement, Black first; got phase=%v turn=%v", a.gs.Phase, a.gs.Turn)
 	}
-	first := game.Hex{2, -1, -1}
+	first := game.Hex{X: 2, Y: -1, Z: -1}
 	if !tapPoint(h, a, first) {
 		t.Fatal("the very first placement should be legal anywhere on the board")
 	}
@@ -107,7 +107,7 @@ func TestPlayHexaPlacementAdjacencyAndTurnOrder(t *testing.T) {
 	}
 
 	// GOTCHA: a non-adjacent placement must be rejected via a real tap.
-	farAway := game.Hex{-game.Radius, game.Radius, 0}
+	farAway := game.Hex{X: -game.Radius, Y: game.Radius, Z: 0}
 	tapPoint(h, a, farAway)
 	if a.gs.Board.HasTile(farAway) {
 		t.Fatal("a placement not touching the cluster must be rejected even via a real tap")
@@ -162,14 +162,14 @@ func TestPlayHexaMoveDisconnectRejectedStandard(t *testing.T) {
 	a.gs.Remaining[game.Black], a.gs.Remaining[game.White] = 0, 0
 	clearBoard(a.gs)
 
-	x, b, c := game.Hex{0, 0, 0}, game.Hex{1, -1, 0}, game.Hex{2, -2, 0}
+	x, b, c := game.Hex{X: 0, Y: 0, Z: 0}, game.Hex{X: 1, Y: -1, Z: 0}, game.Hex{X: 2, Y: -2, Z: 0}
 	a.gs.Board.Tiles[x] = game.Black
 	a.gs.Board.Tiles[b] = game.Black
 	a.gs.Board.Tiles[c] = game.White
 	a.gs.Turn = game.Black
 	h.Draw()
 
-	far := game.Hex{-4, 4, 0}
+	far := game.Hex{X: -4, Y: 4, Z: 0}
 	if playMove(h, a, b, far) {
 		t.Fatal("a move that disconnects the board must be rejected in standard mode, even via real taps")
 	}
@@ -197,10 +197,10 @@ func TestPlayHexaAdvancedSplitViaTaps(t *testing.T) {
 	a.gs.Remaining[game.Black], a.gs.Remaining[game.White] = 10, 0
 	clearBoard(a.gs)
 
-	hub := game.Hex{0, 0, 0}
-	bridge := game.Hex{1, -1, 0}
-	stay := []game.Hex{{-1, 1, 0}, {-2, 2, 0}, {-3, 3, 0}, {-4, 4, 0}, {-5, 5, 0}}
-	goBranch := []game.Hex{{2, -2, 0}, {3, -3, 0}, {4, -4, 0}}
+	hub := game.Hex{X: 0, Y: 0, Z: 0}
+	bridge := game.Hex{X: 1, Y: -1, Z: 0}
+	stay := []game.Hex{{X: -1, Y: 1, Z: 0}, {X: -2, Y: 2, Z: 0}, {X: -3, Y: 3, Z: 0}, {X: -4, Y: 4, Z: 0}, {X: -5, Y: 5, Z: 0}}
+	goBranch := []game.Hex{{X: 2, Y: -2, Z: 0}, {X: 3, Y: -3, Z: 0}, {X: 4, Y: -4, Z: 0}}
 	a.gs.Board.Tiles[hub] = game.Black
 	a.gs.Board.Tiles[bridge] = game.Black
 	for _, p := range stay {
@@ -212,7 +212,7 @@ func TestPlayHexaAdvancedSplitViaTaps(t *testing.T) {
 	a.gs.Turn = game.Black
 	h.Draw()
 
-	to := game.Hex{0, 1, -1}
+	to := game.Hex{X: 0, Y: 1, Z: -1}
 	if !playMove(h, a, bridge, to) {
 		t.Fatal("the advanced-mode disconnecting move should be accepted via real taps")
 	}
@@ -260,7 +260,7 @@ func TestPlayHexaLineWinViaTap(t *testing.T) {
 func TestPlayHexaTriangleWinViaTap(t *testing.T) {
 	h, a := bootToMenu(t)
 	startChoice(t, h, a, game.OpponentHotseat, 0)
-	cells := []game.Hex{{0, 0, 0}, {1, -1, 0}, {2, -2, 0}, {0, 1, -1}, {1, 0, -1}, {0, 2, -2}}
+	cells := []game.Hex{{X: 0, Y: 0, Z: 0}, {X: 1, Y: -1, Z: 0}, {X: 2, Y: -2, Z: 0}, {X: 0, Y: 1, Z: -1}, {X: 1, Y: 0, Z: -1}, {X: 0, Y: 2, Z: -2}}
 	clearBoard(a.gs)
 	for _, p := range cells[:5] {
 		a.gs.Board.Tiles[p] = game.White
@@ -287,7 +287,7 @@ func TestPlayHexaTriangleWinViaTap(t *testing.T) {
 func TestPlayHexaHexRingWinViaTap(t *testing.T) {
 	h, a := bootToMenu(t)
 	startChoice(t, h, a, game.OpponentHotseat, 0)
-	center := game.Hex{0, 0, 0}
+	center := game.Hex{X: 0, Y: 0, Z: 0}
 	ring := game.Neighbors(center)
 	clearBoard(a.gs)
 	for _, p := range ring[:5] {
@@ -316,12 +316,12 @@ func TestPlayHexaMovementFrontierHighlight(t *testing.T) {
 	a.gs.Phase = game.PhaseMoving
 	a.gs.Remaining[game.Black], a.gs.Remaining[game.White] = 0, 0
 	clearBoard(a.gs)
-	a.gs.Board.Tiles[game.Hex{0, 0, 0}] = game.Black
-	a.gs.Board.Tiles[game.Hex{1, -1, 0}] = game.White
+	a.gs.Board.Tiles[game.Hex{X: 0, Y: 0, Z: 0}] = game.Black
+	a.gs.Board.Tiles[game.Hex{X: 1, Y: -1, Z: 0}] = game.White
 	a.gs.Turn = game.Black
 	h.Draw()
 
-	if !tapPoint(h, a, game.Hex{0, 0, 0}) {
+	if !tapPoint(h, a, game.Hex{X: 0, Y: 0, Z: 0}) {
 		t.Fatal("tapping the own tile should select it")
 	}
 	if !a.hasSelection {
@@ -351,7 +351,7 @@ func TestPlayHexaBothOpponentModes(t *testing.T) {
 			if a.gs.AITurn() {
 				t.Fatal("Black (the human) should move first, not the AI")
 			}
-			if !tapPoint(h, a, game.Hex{0, 0, 0}) {
+			if !tapPoint(h, a, game.Hex{X: 0, Y: 0, Z: 0}) {
 				t.Fatal("the human's opening placement should be accepted")
 			}
 			for i := 0; i < 80 && a.gs.Board.Count(game.White) == 0; i++ {
@@ -419,7 +419,7 @@ func TestPlayHexaFullGameToLineWin(t *testing.T) {
 func TestPlayHexaQuit(t *testing.T) {
 	h, a := bootToMenu(t)
 	startChoice(t, h, a, game.OpponentHotseat, 0)
-	tapPoint(h, a, game.Hex{0, 0, 0})
+	tapPoint(h, a, game.Hex{X: 0, Y: 0, Z: 0})
 
 	h.Back()
 	if a.screen != screenMenu {
@@ -492,7 +492,7 @@ func TestPlayHexaScreenshot(t *testing.T) {
 
 	startChoice(t, h, a, game.OpponentHotseat, 0)
 	// Early placement: a handful of tiles down.
-	first := game.Hex{0, 0, 0}
+	first := game.Hex{X: 0, Y: 0, Z: 0}
 	tapPoint(h, a, first)
 	for i, n := range game.Neighbors(first) {
 		if i >= 4 {
@@ -509,9 +509,9 @@ func TestPlayHexaScreenshot(t *testing.T) {
 	// center, alternating colors) rather than via more taps, so the shot
 	// is deterministic and guaranteed dense.
 	clearBoard(a.gs)
-	added := []game.Hex{{0, 0, 0}}
-	seen := map[game.Hex]bool{{0, 0, 0}: true}
-	tmp := map[game.Hex]game.Side{{0, 0, 0}: game.Black}
+	added := []game.Hex{{X: 0, Y: 0, Z: 0}}
+	seen := map[game.Hex]bool{{X: 0, Y: 0, Z: 0}: true}
+	tmp := map[game.Hex]game.Side{{X: 0, Y: 0, Z: 0}: game.Black}
 	for len(added) < 34 {
 		frontier := game.PlaceMoves(tmp)
 		progressed := false
@@ -554,16 +554,16 @@ func TestPlayHexaScreenshot(t *testing.T) {
 	// but visually busy for a legibility screenshot).
 	clearBoard(a.gs)
 	a.gs.Phase = game.PhaseMoving
-	frontierCenter := game.Hex{0, 0, 0}
+	frontierCenter := game.Hex{X: 0, Y: 0, Z: 0}
 	a.gs.Board.Tiles[frontierCenter] = game.Black
 	for i, n := range game.Neighbors(frontierCenter) {
 		if i%2 == 0 {
 			a.gs.Board.Tiles[n] = game.White
 		}
 	}
-	far := game.Hex{3, -3, 0}
+	far := game.Hex{X: 3, Y: -3, Z: 0}
 	a.gs.Board.Tiles[far] = game.Black
-	a.gs.Board.Tiles[game.Hex{4, -4, 0}] = game.White
+	a.gs.Board.Tiles[game.Hex{X: 4, Y: -4, Z: 0}] = game.White
 	a.gs.Remaining[game.Black] = game.TilesPerSide - a.gs.Board.Count(game.Black)
 	a.gs.Remaining[game.White] = game.TilesPerSide - a.gs.Board.Count(game.White)
 	a.gs.Turn = game.Black
@@ -590,7 +590,7 @@ func TestPlayHexaScreenshot(t *testing.T) {
 
 	clearBoard(a.gs)
 	a.gs.Phase = game.PhasePlacement
-	tri := []game.Hex{{0, 0, 0}, {1, -1, 0}, {2, -2, 0}, {0, 1, -1}, {1, 0, -1}, {0, 2, -2}}
+	tri := []game.Hex{{X: 0, Y: 0, Z: 0}, {X: 1, Y: -1, Z: 0}, {X: 2, Y: -2, Z: 0}, {X: 0, Y: 1, Z: -1}, {X: 1, Y: 0, Z: -1}, {X: 0, Y: 2, Z: -2}}
 	for _, p := range tri[:5] {
 		a.gs.Board.Tiles[p] = game.White
 	}
@@ -604,7 +604,7 @@ func TestPlayHexaScreenshot(t *testing.T) {
 
 	clearBoard(a.gs)
 	a.gs.Phase = game.PhasePlacement
-	center := game.Hex{0, 0, 0}
+	center := game.Hex{X: 0, Y: 0, Z: 0}
 	ring := game.Neighbors(center)
 	for _, p := range ring[:5] {
 		a.gs.Board.Tiles[p] = game.Black

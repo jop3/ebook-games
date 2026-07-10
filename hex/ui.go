@@ -300,7 +300,7 @@ func DrawButtonBar(l *Layout, labels []string, f *Fonts) []Button {
 	}
 	gap := 20
 	topGap := gap
-	bottomGap := 24 // matches ink.SafeMarginBottom so buttons never enter the margin
+	bottomGap := 24  // matches ink.SafeMarginBottom so buttons never enter the margin
 	sideMargin := 24 // keep buttons clear of the left/right safe-area margin
 	totalGap := gap*(n-1) + 2*sideMargin
 	bw := (l.ButtonBar.Dx() - totalGap) / n

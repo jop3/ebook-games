@@ -189,7 +189,7 @@ func TestPlayHertigenIllegalDestinationRejected(t *testing.T) {
 	a.gs.Turn = game.Black
 	h.Draw()
 
-	tapCell(h, a, 2, 2)             // select the Footman
+	tapCell(h, a, 2, 2) // select the Footman
 	if tapCell(h, a, 4, 4) {
 		t.Fatal("a far-away square is not a legal Face A destination and must be rejected")
 	}

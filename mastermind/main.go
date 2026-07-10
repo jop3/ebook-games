@@ -40,10 +40,10 @@ type App struct {
 	rulesBack   button // "Tillbaka" on the rules screen
 
 	// Knuth ("Enheten gissar") mode state.
-	knuth      *KnuthSolver
-	kfbBlack   int  // player's in-progress black-feedback count for current guess
-	kfbWhite   int  // player's in-progress white-feedback count
-	aiPending  bool // true after a confirm: compute the next guess on next Draw
+	knuth     *KnuthSolver
+	kfbBlack  int  // player's in-progress black-feedback count for current guess
+	kfbWhite  int  // player's in-progress white-feedback count
+	aiPending bool // true after a confirm: compute the next guess on next Draw
 
 	// cached hit rectangles for the Knuth screen.
 	knuthBtn    button // "Enheten gissar" on the menu

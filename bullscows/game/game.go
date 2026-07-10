@@ -2,8 +2,10 @@
 // with no dependency on the inkview SDK so it can be unit-tested cgo-free.
 //
 // The host holds a secret code of N distinct digits. Each guess scores:
-//   Bulls — digits correct in both value AND position.
-//   Cows  — digits present in the code but in the wrong position.
+//
+//	Bulls — digits correct in both value AND position.
+//	Cows  — digits present in the code but in the wrong position.
+//
 // The player wins when all N digits are bulls. Fewer guesses is better.
 package game
 

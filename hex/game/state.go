@@ -5,7 +5,7 @@ type Mode int
 
 const (
 	ModeHotseat Mode = iota
-	ModeAI            // human plays Black, AI plays White
+	ModeAI           // human plays Black, AI plays White
 )
 
 // Phase is the high-level game state.

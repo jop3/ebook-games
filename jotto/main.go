@@ -7,6 +7,7 @@
 //   - right letter, right place -> filled black tile
 //   - right letter, wrong place -> hollow ringed tile
 //   - letter not in the word     -> light/empty tile
+//
 // Duplicate letters follow Wordle rules. Six guesses are allowed.
 //
 // Pure game logic (dictionary, secret selection, Evaluate, guess state) lives in

@@ -200,7 +200,7 @@ func TestSetClipRestrictsDrawing(t *testing.T) {
 		f := OpenFont(DefaultFont, 40, true)
 		f.SetActive(Black)
 		DrawString(image.Pt(150, 400), "clippedtext") // entirely outside the clip
-		SetClip(Screen()) // full-screen clip = no clipping again
+		SetClip(Screen())                             // full-screen clip = no clipping again
 		FillArea(image.Rect(500, 500, 510, 510), Black)
 	}})
 	if got := pxAt(t, h, 160, 160); got != black {

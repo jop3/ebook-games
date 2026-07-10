@@ -24,11 +24,11 @@ const (
 
 // fonts holds every (typeface,size) opened ONCE in Init and reused.
 type fonts struct {
-	title *ink.Font // big menu/title text
-	cell  *ink.Font // digits in grid cells (bold)
+	title  *ink.Font // big menu/title text
+	cell   *ink.Font // digits in grid cells (bold)
 	pencil *ink.Font // small pencil-mark notes
 	button *ink.Font // button labels
-	small *ink.Font // status / hint text
+	small  *ink.Font // status / hint text
 
 	splash *ink.Font // big splash title
 	rules  *ink.Font // rules body text

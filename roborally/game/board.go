@@ -5,9 +5,9 @@ import "image"
 // Floor kinds. A tile is exactly one floor kind; belts/gears live on Floor
 // tiles only (the generator never puts a belt on a pit/repair/checkpoint).
 const (
-	FloorPlain uint8 = iota
-	FloorPit         // falling in kills the robot
-	FloorRepair      // heals 1 damage and updates the archive
+	FloorPlain  uint8 = iota
+	FloorPit          // falling in kills the robot
+	FloorRepair       // heals 1 damage and updates the archive
 )
 
 // Tile is a single board square. The zero value is a plain floor with no walls

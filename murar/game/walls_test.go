@@ -88,9 +88,9 @@ func TestCanPlaceWallRejectsTrappingP1(t *testing.T) {
 	b.Pawns[P2] = image.Pt(4, 0) // clear path to its own goal (row 8)
 
 	top := Wall{X: 3, Y: 3, Orient: Horizontal}    // blocks (4,3)-(4,4)
-	bottom := Wall{X: 4, Y: 4, Orient: Horizontal}  // blocks (4,4)-(4,5)
-	left := Wall{X: 3, Y: 4, Orient: Vertical}      // blocks (3,4)-(4,4)
-	right := Wall{X: 4, Y: 3, Orient: Vertical}     // blocks (4,4)-(5,4)
+	bottom := Wall{X: 4, Y: 4, Orient: Horizontal} // blocks (4,4)-(4,5)
+	left := Wall{X: 3, Y: 4, Orient: Vertical}     // blocks (3,4)-(4,4)
+	right := Wall{X: 4, Y: 3, Orient: Vertical}    // blocks (4,4)-(5,4)
 
 	for _, w := range []Wall{top, bottom, left} {
 		if !CanPlaceWall(&b, w) {

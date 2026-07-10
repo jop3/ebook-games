@@ -590,9 +590,9 @@ func drawSplashMotif(box image.Rectangle) {
 	cy := (box.Min.Y + box.Max.Y) / 2
 	unit := box.Dx() / 6
 
-	p1 := image.Pt(box.Min.X+unit, cy) // where the queen started
+	p1 := image.Pt(box.Min.X+unit, cy)          // where the queen started
 	p2 := image.Pt(box.Min.X+3*unit, cy-unit/2) // where it lands
-	p3 := image.Pt(box.Min.X+5*unit, cy-unit) // the burned square it shoots
+	p3 := image.Pt(box.Min.X+5*unit, cy-unit)   // the burned square it shoots
 
 	// (1) Ghost ring: the queen's original square, now empty.
 	ringR := unit * 3 / 5

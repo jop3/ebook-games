@@ -13,12 +13,12 @@ import "sort"
 type Source int
 
 const (
-	SourceNone     Source = iota // no series known
-	SourceMetadata               // books_impl.series / numinseries (device DB)
-	SourceTitle                  // parsed out of the title heuristically
-	SourceWikidata               // Wikidata P179 + P1545 ordinal
-	SourceWikipedia              // Wikipedia infobox series / #N
-	SourceManual                 // user set it by hand in the app
+	SourceNone      Source = iota // no series known
+	SourceMetadata                // books_impl.series / numinseries (device DB)
+	SourceTitle                   // parsed out of the title heuristically
+	SourceWikidata                // Wikidata P179 + P1545 ordinal
+	SourceWikipedia               // Wikipedia infobox series / #N
+	SourceManual                  // user set it by hand in the app
 )
 
 func (s Source) String() string {

@@ -7,8 +7,9 @@
 // until the ON edges form a single closed loop that satisfies every clue.
 //
 // Edges are stored as two grids:
-//   HEdge[y][x] — horizontal edge between dot (x,y) and (x+1,y); y in 0..H, x in 0..W-1
-//   VEdge[y][x] — vertical edge between dot (x,y) and (x,y+1);   y in 0..H-1, x in 0..W
+//
+//	HEdge[y][x] — horizontal edge between dot (x,y) and (x+1,y); y in 0..H, x in 0..W-1
+//	VEdge[y][x] — vertical edge between dot (x,y) and (x,y+1);   y in 0..H-1, x in 0..W
 package game
 
 // EdgeState is what the player has marked an edge as.

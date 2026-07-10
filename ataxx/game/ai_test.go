@@ -33,8 +33,8 @@ func TestBestMoveNoMoveWhenNoneExist(t *testing.T) {
 func TestBestMovePrefersTheFlippingMove(t *testing.T) {
 	var b Board
 	b.set(3, 3, Black)
-	b.set(4, 3, White)  // Black cloning to (4,4) flips this
-	b.set(0, 0, Black)  // a second Black man with only quiet moves available
+	b.set(4, 3, White) // Black cloning to (4,4) flips this
+	b.set(0, 0, Black) // a second Black man with only quiet moves available
 	m, ok := BestMove(b, Black, DepthEasy)
 	if !ok {
 		t.Fatal("BestMove should find a move")

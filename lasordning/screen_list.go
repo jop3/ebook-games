@@ -12,10 +12,10 @@ import (
 // a book count, followed by a "Fristående" section for books with no series.
 // It is a flat, scrollable list of rows; each series row is tappable.
 type listView struct {
-	top      int             // index of the first visible row
-	rows     []listRow       // last-rendered rows (for hit testing)
+	top      int       // index of the first visible row
+	rows     []listRow // last-rendered rows (for hit testing)
 	rowRects []image.Rectangle
-	status   string          // transient status line (sync progress)
+	status   string // transient status line (sync progress)
 }
 
 type listRowKind int
@@ -181,9 +181,18 @@ func (v *listView) seriesAt(p image.Point) (int, bool) {
 
 // ellipsize helpers that set the right font active first, so width is measured
 // with the correct face.
-func ellipsizeAt(f *Fonts, s string, maxW int) string  { f.Small.SetActive(ink.DarkGray); return ellipsize(s, maxW) }
-func ellipsizeAt2(f *Fonts, s string, maxW int) string { f.Small.SetActive(ink.DarkGray); return ellipsize(s, maxW) }
-func ellipsizeAt3(f *Fonts, s string, maxW int) string { f.Body.SetActive(ink.Black); return ellipsize(s, maxW) }
+func ellipsizeAt(f *Fonts, s string, maxW int) string {
+	f.Small.SetActive(ink.DarkGray)
+	return ellipsize(s, maxW)
+}
+func ellipsizeAt2(f *Fonts, s string, maxW int) string {
+	f.Small.SetActive(ink.DarkGray)
+	return ellipsize(s, maxW)
+}
+func ellipsizeAt3(f *Fonts, s string, maxW int) string {
+	f.Body.SetActive(ink.Black)
+	return ellipsize(s, maxW)
+}
 
 func minInt(a, b int) int {
 	if a < b {
