@@ -606,7 +606,9 @@ func (g *Game) touchPlay(p image.Point) {
 	for _, h := range g.cellHits {
 		if p.In(h.r) {
 			g.notes.Cycle(h.ca, h.va, h.cb, h.vb)
-			ink.PartialUpdate(h.r)
+			// Just queue the redraw: a PartialUpdate here would flush the
+			// STALE framebuffer (Cycle only changed state; nothing has
+			// repainted the cell yet) — one pointless flicker per tap.
 			ink.Repaint()
 			return
 		}

@@ -40,10 +40,17 @@ jobs:
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "release $VERSION already exists — will (re)upload assets"
           else
+            {
+              echo "Tagged build of the ebook-games library. Each game's PocketBook ARM .app is attached below as a zip."
+              echo
+              echo "**Install straight from the reader (no computer):** install Spelbutiken once — download \`spelbutiken.install\` with the device's web browser, move it to \`applications/\` and rename it to \`spelbutiken.app\` with KOReader's file browser — then open Spelbutiken on the reader and tap \"Installera allt\". Step-by-step: spelbutiken/README.md."
+              echo
+              echo "**Install from a computer:** unzip a game and copy the .app into the device's applications/ folder over USB (POCKETBOOK_GAMEDEV_GUIDE.md §7–§8)."
+            } > /tmp/release-notes.md
             gh release create "$VERSION" \
               --target "$GITHUB_SHA" \
               --title "ebook-games $VERSION" \
-              --notes "Tagged build of the ebook-games library. Each game's PocketBook ARM .app is attached below — copy it into the device's applications/ folder (see POCKETBOOK_GAMEDEV_GUIDE.md §7-§8)."
+              --notes-file /tmp/release-notes.md
           fi
 
       - name: Build every game's .app and attach it to the release
@@ -67,3 +74,15 @@ jobs:
             gh release upload "$VERSION" "$m.zip" --clobber
           done
           echo "Attached all games as <game>.zip to release $VERSION"
+
+      - name: Attach the raw Spelbutiken bootstrap binary
+        # The one file a computer-less install needs: downloaded with the
+        # device's own browser and moved into applications/ (renamed to
+        # spelbutiken.app) with KOReader's file browser. Every other game is
+        # then installed by Spelbutiken on the reader itself. Uploaded
+        # UNZIPPED — the stock firmware has no unzip — under a .install name
+        # since release assets can't be named *.app.
+        run: |
+          set -euxo pipefail
+          cp spelbutiken/spelbutiken.app spelbutiken.install
+          gh release upload "$VERSION" spelbutiken.install --clobber

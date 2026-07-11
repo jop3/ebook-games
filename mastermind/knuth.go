@@ -21,12 +21,12 @@ package main
 
 // KnuthSolver drives the device's guessing for one code the player is holding.
 type KnuthSolver struct {
-	cfg       Config
-	all       []Guess // every code allowed by cfg (candidate guess pool)
-	possible  []Guess // codes still consistent with all feedback so far
-	guess     Guess   // the device's current guess awaiting feedback
-	turn      int     // number of guesses made so far (1-based once started)
-	solved    bool
+	cfg        Config
+	all        []Guess // every code allowed by cfg (candidate guess pool)
+	possible   []Guess // codes still consistent with all feedback so far
+	guess      Guess   // the device's current guess awaiting feedback
+	turn       int     // number of guesses made so far (1-based once started)
+	solved     bool
 	impossible bool
 }
 

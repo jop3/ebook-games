@@ -224,7 +224,7 @@ type Action struct {
 	Kind    ActionKind
 	From    image.Point // origin square (ActRelocate/ActStrike)
 	To      image.Point // destination (ActRelocate) or target (ActStrike) or placement (ActRecruit)
-	Recruit TileType     // meaningful only when Kind == ActRecruit
+	Recruit TileType    // meaningful only when Kind == ActRecruit
 }
 
 // ActionsFrom returns every legal ActRelocate/ActStrike action for the tile

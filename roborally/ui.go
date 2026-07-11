@@ -442,10 +442,10 @@ func drawStartDock(rect image.Rectangle, num, cell int, f *Fonts) {
 	r := pad(rect, cell/8)
 	n := cell / 4
 	corners := [4][3]image.Point{
-		{r.Min, image.Pt(r.Min.X + n, r.Min.Y), image.Pt(r.Min.X, r.Min.Y + n)},
-		{image.Pt(r.Max.X, r.Min.Y), image.Pt(r.Max.X - n, r.Min.Y), image.Pt(r.Max.X, r.Min.Y + n)},
-		{image.Pt(r.Min.X, r.Max.Y), image.Pt(r.Min.X + n, r.Max.Y), image.Pt(r.Min.X, r.Max.Y - n)},
-		{r.Max, image.Pt(r.Max.X - n, r.Max.Y), image.Pt(r.Max.X, r.Max.Y - n)},
+		{r.Min, image.Pt(r.Min.X+n, r.Min.Y), image.Pt(r.Min.X, r.Min.Y+n)},
+		{image.Pt(r.Max.X, r.Min.Y), image.Pt(r.Max.X-n, r.Min.Y), image.Pt(r.Max.X, r.Min.Y+n)},
+		{image.Pt(r.Min.X, r.Max.Y), image.Pt(r.Min.X+n, r.Max.Y), image.Pt(r.Min.X, r.Max.Y-n)},
+		{r.Max, image.Pt(r.Max.X-n, r.Max.Y), image.Pt(r.Max.X, r.Max.Y-n)},
 	}
 	for _, c := range corners {
 		for o := 0; o <= 1; o++ {

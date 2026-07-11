@@ -42,10 +42,10 @@ type app struct {
 	gridX, gridY, cell int
 
 	// button rectangles (screen coords), recomputed each Draw
-	btnNew    image.Rectangle
-	btnMenu   image.Rectangle
-	btnHint   image.Rectangle
-	menuBtns  []menuButton
+	btnNew   image.Rectangle
+	btnMenu  image.Rectangle
+	btnHint  image.Rectangle
+	menuBtns []menuButton
 
 	menuRules image.Rectangle // "Regler" button on the menu
 	rulesBack image.Rectangle // "Tillbaka" button on the rules screen

@@ -61,9 +61,9 @@ SELECT b.id, COALESCE(b.title,''), COALESCE(b.author,''),
 	var out []series.Book
 	for rows.Next() {
 		var (
-			b        series.Book
-			sName    string
-			sNum     float64
+			b     series.Book
+			sName string
+			sNum  float64
 		)
 		if err := rows.Scan(&b.ID, &b.Title, &b.Author, &b.FirstAuthor, &b.Ext, &sName, &sNum); err != nil {
 			return nil, err

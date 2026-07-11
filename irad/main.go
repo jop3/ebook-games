@@ -292,19 +292,15 @@ func (a *app) commitMove(m game.Move) {
 func (a *app) afterMove() {
 	a.moveCount++
 
-	// If it's now the AI's turn, paint "AI tänker..." first, then let the
-	// next Draw-triggered step compute the move. We mark aiPending and
-	// request a repaint; the AI move is computed in maybeRunAI invoked from
-	// Draw so the status is visible to the user.
 	if a.gs.AITurn() {
 		a.aiPending = true
 	}
 	ink.Repaint()
 
-	// Compute the AI move immediately after requesting the repaint. On e-ink
-	// the heuristic is sub-second, so a synchronous compute keeps the code
-	// single-threaded and predictable; the status text already reads
-	// "AI tänker..." in the queued frame.
+	// Compute the AI move synchronously, right here in the handler. The
+	// heuristic is sub-second, so single-threaded and predictable beats a
+	// deferred compute; by the time the queued repaint renders, the AI's
+	// reply is already on the board.
 	if a.aiPending {
 		a.runAI()
 	}

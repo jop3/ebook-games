@@ -589,15 +589,17 @@ func drawFinalBreakdown(l *Layout, gs *game.State, f *Fonts) {
 	drawLeftString(r, totalLine, 30)
 }
 
+// padRight/padLeft pad by RUNE count — "Öknen" is 5 runes but 6 bytes, so a
+// byte-based pad left the Desert row one space short in the final breakdown.
 func padRight(s string, n int) string {
-	for len(s) < n {
+	for len([]rune(s)) < n {
 		s += " "
 	}
 	return s
 }
 
 func padLeft(s string, n int) string {
-	for len(s) < n {
+	for len([]rune(s)) < n {
 		s = " " + s
 	}
 	return s

@@ -55,7 +55,7 @@ func carve(p Preset, rng *rand.Rand) (sea [][]bool, seeds map[[2]int]int, ok boo
 
 	var islandCells [][][2]int
 	targetIslandCount := 2 + rng.Intn(3) // 2-4 islands
-	maxTotalIslandCells := w * h * 3 / 5  // leave room for connected sea
+	maxTotalIslandCells := w * h * 3 / 5 // leave room for connected sea
 
 	totalUsed := 0
 	for len(islandCells) < targetIslandCount && totalUsed < maxTotalIslandCells {

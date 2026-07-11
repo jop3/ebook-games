@@ -90,29 +90,27 @@ func (s *GameState) Toggle(x, y int) bool {
 	return true
 }
 
-// checkDone sets Done when every cell's Sea/Island paint matches the hidden
-// solution (Unknown cells are not yet decided, so Done requires no Unknowns).
+// checkDone sets Done when the board is fully painted AND satisfies all four
+// Nurikabe constraints. It deliberately does NOT compare against the stored
+// generator fill: the generator doesn't certify uniqueness, so a puzzle can
+// have several fully valid solutions — a player who finds a different one
+// must still win, not be stuck staring at a correct board that never fires
+// "Löst!".
 func (s *GameState) checkDone() {
+	sea := make([][]bool, s.Puz.H)
 	for y := 0; y < s.Puz.H; y++ {
+		sea[y] = make([]bool, s.Puz.W)
 		for x := 0; x < s.Puz.W; x++ {
 			switch s.Cells[y][x] {
 			case StateUnknown:
 				s.Done = false
 				return
 			case StateSea:
-				if !s.Puz.Solution[y][x] {
-					s.Done = false
-					return
-				}
-			case StateIsland:
-				if s.Puz.Solution[y][x] {
-					s.Done = false
-					return
-				}
+				sea[y][x] = true
 			}
 		}
 	}
-	s.Done = true
+	s.Done = ValidateSolution(s.Puz.W, s.Puz.H, sea, s.Puz.Seeds)
 }
 
 // Reset clears all non-seed cells back to Unknown.

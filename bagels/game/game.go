@@ -3,9 +3,11 @@
 //
 // The host holds a secret code of N distinct digits. Each guess is scored per
 // digit and reported as sorted WORDS (never revealing which position matched):
-//   Fermi  — a digit correct in both value AND position.
-//   Pico   — a digit present in the code but in the wrong position.
-//   Bagels — printed once when NO digit is in the code at all.
+//
+//	Fermi  — a digit correct in both value AND position.
+//	Pico   — a digit present in the code but in the wrong position.
+//	Bagels — printed once when NO digit is in the code at all.
+//
 // The player wins when every digit is a Fermi. A limited number of guesses is
 // allowed; running out is a loss.
 package game

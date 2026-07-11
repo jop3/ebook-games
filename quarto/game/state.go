@@ -22,7 +22,7 @@ type Step int
 
 const (
 	StepPlace Step = iota // must place ActivePiece on the board
-	StepGive               // must choose a piece from the pool to hand to the opponent
+	StepGive              // must choose a piece from the pool to hand to the opponent
 )
 
 // GameState is a full playable Quarto game.

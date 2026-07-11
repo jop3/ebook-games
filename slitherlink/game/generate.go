@@ -193,9 +193,9 @@ func randomLoop(W, H int, rng *rand.Rand) (hEdge, vEdge [][]bool, ok bool) {
 		// Gather candidate moves: to an unvisited neighbour dot, OR back to
 		// start if the path is long enough to close the loop.
 		type move struct {
-			nx, ny int
-			isH    bool
-			ex, ey int
+			nx, ny  int
+			isH     bool
+			ex, ey  int
 			toStart bool
 		}
 		var moves []move

@@ -24,11 +24,11 @@ const (
 )
 
 type fonts struct {
-	title   *ink.Font // big title / letters
-	big     *ink.Font // letters, input
-	button  *ink.Font // button labels
-	body    *ink.Font // found words list
-	small   *ink.Font // hints / status
+	title  *ink.Font // big title / letters
+	big    *ink.Font // letters, input
+	button *ink.Font // button labels
+	body   *ink.Font // found words list
+	small  *ink.Font // hints / status
 }
 
 type app struct {

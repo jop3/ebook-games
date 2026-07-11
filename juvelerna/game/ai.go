@@ -24,32 +24,68 @@ const (
 	ActionReserveBlind
 	ActionBuyTableau
 	ActionBuyReserved
+	ActionPass // last resort: no other action exists
 )
 
 // Action is a candidate turn action, as enumerated by LegalActions and
 // applied by Apply. Only the fields relevant to Kind are meaningful.
 type Action struct {
 	Kind        ActionKind
-	Colors      [3]Color // Take3: all 3; Take2: Colors[0]
+	Colors      [3]Color // Take3: the NumTake colors used; Take2: Colors[0]
+	NumTake     int      // Take3: how many of Colors are used (0 means 3)
 	Tier, Slot  int      // Reserve/Buy tableau
 	ReservedIdx int      // BuyReserved
 }
 
+// takeColors returns the Take3 action's color list, honouring the take-fewer
+// fallback encoding (NumTake 0 = classic 3).
+func (a Action) takeColors() []Color {
+	n := a.NumTake
+	if n == 0 {
+		n = 3
+	}
+	return a.Colors[:n]
+}
+
 // LegalActions enumerates every legal Action for the player currently to
-// move (gs.Turn).
+// move (gs.Turn), appending the last-resort Pass only when nothing else is
+// legal — so a pathological empty-bank position can never deadlock a turn.
 func (gs *GameState) LegalActions() []Action {
+	out := gs.legalActionsNoPass()
+	if len(out) == 0 && gs.Phase == PhasePlaying {
+		out = append(out, Action{Kind: ActionPass})
+	}
+	return out
+}
+
+func (gs *GameState) legalActionsNoPass() []Action {
 	var out []Action
 	p := &gs.Players[gs.Turn]
 
-	for i := Color(0); i < NumColors; i++ {
-		for j := i + 1; j < NumColors; j++ {
-			for k := j + 1; k < NumColors; k++ {
-				colors := [3]Color{i, j, k}
-				if gs.CanTake3(colors) {
-					out = append(out, Action{Kind: ActionTake3, Colors: colors})
+	// Take different colors: 3 normally; when fewer piles remain, the single
+	// maximal take of every remaining color (official take-fewer fallback).
+	switch n := gs.takeableColors(); n {
+	case 3:
+		for i := Color(0); i < NumColors; i++ {
+			for j := i + 1; j < NumColors; j++ {
+				for k := j + 1; k < NumColors; k++ {
+					colors := [3]Color{i, j, k}
+					if gs.CanTake3(colors) {
+						out = append(out, Action{Kind: ActionTake3, Colors: colors, NumTake: 3})
+					}
 				}
 			}
 		}
+	case 1, 2:
+		var a Action
+		a.Kind = ActionTake3
+		for c := Color(0); c < NumColors; c++ {
+			if gs.Bank[c] > 0 {
+				a.Colors[a.NumTake] = c
+				a.NumTake++
+			}
+		}
+		out = append(out, a)
 	}
 	for c := Color(0); c < NumColors; c++ {
 		if gs.CanTake2(c) {
@@ -88,9 +124,11 @@ func (gs *GameState) LegalActions() []Action {
 func (gs *GameState) Apply(a Action) bool {
 	switch a.Kind {
 	case ActionTake3:
-		return gs.Take3(a.Colors)
+		return gs.TakeColors(a.takeColors())
 	case ActionTake2:
 		return gs.Take2(a.Colors[0])
+	case ActionPass:
+		return gs.Pass()
 	case ActionReserveTableau:
 		return gs.ReserveTableau(a.Tier, a.Slot)
 	case ActionReserveBlind:

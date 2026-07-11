@@ -145,8 +145,19 @@ func (s *GameState) Place(side Cell, pieceID, orientIdx int, anchor image.Point)
 	}
 	s.Hand(side)[pieceID] = false
 
+	// Enclosure re-floods regions sealed on EARLIER moves too (its membership
+	// test ignores Sealed), so filter against the pre-move state to record
+	// only this placement's newly sealed cells — otherwise LastSealed grows
+	// into the whole seal history.
+	wasSealed := s.Board.Sealed
 	sealed, captured := Enclosure(&s.Board)
-	s.LastSealed = sealed
+	newly := sealed[:0]
+	for _, p := range sealed {
+		if !wasSealed[p.Y][p.X] {
+			newly = append(newly, p)
+		}
+	}
+	s.LastSealed = newly
 	var flash []image.Point
 	for _, cp := range captured {
 		s.Hand(cp.Owner)[cp.PieceID] = true

@@ -83,8 +83,8 @@ func TestJumpDestinationsCorner(t *testing.T) {
 func TestDestinationsExcludeOccupiedCells(t *testing.T) {
 	b := emptyBoard()
 	b.set(3, 3, Black)
-	b.set(4, 3, White)  // blocks one clone destination
-	b.set(5, 3, Black)  // blocks one jump destination
+	b.set(4, 3, White) // blocks one clone destination
+	b.set(5, 3, Black) // blocks one jump destination
 	clones := b.CloneDestinations(image.Pt(3, 3))
 	for _, d := range clones {
 		if d == (image.Point{X: 4, Y: 3}) {

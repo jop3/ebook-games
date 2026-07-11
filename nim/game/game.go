@@ -44,10 +44,10 @@ type Move struct {
 
 // Errors returned by ApplyMove / validate.
 var (
-	ErrGameOver     = errors.New("game is over")
-	ErrBadPile      = errors.New("no such pile")
-	ErrBadCount     = errors.New("count must be >= 1 and <= pile size")
-	ErrEmptyPile    = errors.New("pile is empty")
+	ErrGameOver  = errors.New("game is over")
+	ErrBadPile   = errors.New("no such pile")
+	ErrBadCount  = errors.New("count must be >= 1 and <= pile size")
+	ErrEmptyPile = errors.New("pile is empty")
 )
 
 // GameState is the full mutable state of a Nim game.
@@ -98,7 +98,8 @@ func (g *GameState) nonEmptyPiles() int {
 			c++
 		}
 	}
-	return c}
+	return c
+}
 
 // pilesAboveOne counts piles holding 2 or more sticks.
 func (g *GameState) pilesAboveOne() int {

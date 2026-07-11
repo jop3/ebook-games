@@ -104,8 +104,10 @@ func (a *app) drawHeader(W int) {
 	// Room name, clipped so it never runs under the buttons.
 	a.fonts.Header.SetActive(ink.Black)
 	name := story.RoomName(a.st)
-	for ink.StringWidth(name) > book.Min.X-sideMargin-16 && len(name) > 1 {
-		name = name[:len(name)-1]
+	// Trim by runes, not bytes — a byte chop can split ö and leave invalid UTF-8.
+	for rs := []rune(name); ink.StringWidth(name) > book.Min.X-sideMargin-16 && len(rs) > 1; {
+		rs = rs[:len(rs)-1]
+		name = string(rs)
 	}
 	ink.DrawString(image.Pt(sideMargin, top.Min.Y+(headerH-40)/2), name)
 
@@ -333,12 +335,14 @@ func drawButton(r image.Rectangle, label string, armed bool, f *ink.Font) {
 		f.SetActive(ink.Black)
 	}
 	// Fit the label; shrink obvious overflows by ellipsizing (guide §5a).
+	// Truncate by runes, not bytes, so a trimmed å/ä/ö can't leave invalid
+	// UTF-8 behind.
 	s := label
-	for ink.StringWidth(s) > r.Dx()-12 && len(s) > 1 {
-		s = s[:len(s)-1]
-	}
-	if s != label && len(s) > 1 {
-		s = s[:len(s)-1] + "…"
+	if rs := []rune(label); ink.StringWidth(s) > r.Dx()-12 {
+		for len(rs) > 1 && ink.StringWidth(string(rs)+"…") > r.Dx()-12 {
+			rs = rs[:len(rs)-1]
+		}
+		s = string(rs) + "…"
 	}
 	drawCentered(r, s, 30)
 	f.SetActive(ink.Black)

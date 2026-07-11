@@ -21,7 +21,7 @@ func (v *editView) draw(screen image.Point, f *Fonts) []Button {
 	ink.ClearScreen()
 
 	f.Title.SetActive(ink.Black)
-	ink.DrawString(image.Pt(24, 24), "Ändra ordning")
+	ink.DrawString(image.Pt(24, topMargin+20), "Ändra ordning")
 	ink.DrawLine(image.Pt(0, titleBarH), image.Pt(screen.X, titleBarH), ink.Black)
 
 	// Book title + series.

@@ -425,12 +425,15 @@ func DrawSplash(screenPt image.Point, f *Fonts, title string, motif motifFunc) {
 	tf.SetActive(ink.Black)
 	tw := ink.StringWidth(title)
 	ink.DrawString(image.Pt((screen.X-tw)/2, screen.Y/6), title)
-	tf.Close()
 
 	side := screen.X * 3 / 5
 	box := image.Rect((screen.X-side)/2, (screen.Y-side)/2,
 		(screen.X+side)/2, (screen.Y+side)/2)
+	// The motif draws the seed-number labels with the ACTIVE font, so tf
+	// must stay open (and active) until after it runs — closing it first
+	// left the SDK's global font pointing at freed C memory.
 	motif(box)
+	tf.Close()
 
 	hint := ink.OpenFont(ink.DefaultFont, 34, true)
 	hint.SetActive(ink.DarkGray)

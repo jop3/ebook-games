@@ -61,9 +61,9 @@ func (s *solverState) set(isH bool, x, y int, v EdgeState) {
 
 // undoEntry records a single edge assignment so it can be reverted.
 type undoEntry struct {
-	isH bool
+	isH  bool
 	x, y int
-	old EdgeState
+	old  EdgeState
 }
 
 // setLogged assigns an edge and appends an undo entry, but only if the edge

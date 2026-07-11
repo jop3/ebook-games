@@ -101,8 +101,9 @@ func Generate(p Preset, rng *rand.Rand) *Puzzle {
 	return &Puzzle{W: p.W, H: p.H, Solution: sol, RowClues: rowClues, ColClues: colClues}
 }
 
-// randomPicture draws a random filled picture, guaranteeing at least one filled
-// cell per row and column so no clue is empty on tiny grids (nicer to solve).
+// randomPicture draws a random filled picture by independent per-cell
+// sampling at the preset's density. An all-blank row or column is possible
+// and fine — it just renders as a "0" clue.
 func randomPicture(p Preset, rng *rand.Rand) [][]bool {
 	sol := make([][]bool, p.H)
 	for y := range sol {

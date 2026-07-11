@@ -387,10 +387,13 @@ func fitLabel(label string, maxW int, f *Fonts) string {
 	if ink.StringWidth(label) <= maxW {
 		return label
 	}
-	for len(label) > 1 && ink.StringWidth(label+"…") > maxW {
-		label = label[:len(label)-1]
+	// Truncate by runes, not bytes — byte slicing could split å/ä/ö and hand
+	// invalid UTF-8 to DrawString.
+	rs := []rune(label)
+	for len(rs) > 1 && ink.StringWidth(string(rs)+"…") > maxW {
+		rs = rs[:len(rs)-1]
 	}
-	return label + "…"
+	return string(rs) + "…"
 }
 
 // --- Menu ------------------------------------------------------------------

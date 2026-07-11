@@ -66,7 +66,7 @@ func (c *SeriesCache) Put(fs series.FullSeries) error {
 	return os.Rename(tmp, c.path)
 }
 
-// Names returns how many series are cached (for status display).
+// Count returns how many series are cached (for status display).
 func (c *SeriesCache) Count() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()

@@ -9,6 +9,7 @@ package game
 
 import (
 	"math/rand"
+	"sort"
 	"time"
 )
 
@@ -92,6 +93,10 @@ func (p *Puzzle) neighbours(i int) map[int]int {
 
 // NeighbourList returns the sorted list of neighbour island indices for i
 // (any direction), used by the UI to know which islands are tappable.
+// Sorting matters beyond cosmetics: the solver's pair list and the generator
+// both derive from this, and ranging over the neighbours MAP here made
+// generation non-reproducible for a fixed seed (and solver call counts
+// flappy) — the map's iteration order leaked into everything downstream.
 func (p *Puzzle) NeighbourList(i int) []int {
 	nb := p.neighbours(i)
 	seen := map[int]bool{}
@@ -102,6 +107,7 @@ func (p *Puzzle) NeighbourList(i int) []int {
 			out = append(out, j)
 		}
 	}
+	sort.Ints(out)
 	return out
 }
 

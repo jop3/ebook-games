@@ -198,7 +198,13 @@ func BestMove(b *Board, side Side, depth int) (Move, bool) {
 				alpha = best
 			}
 		}
-		if curFound {
+		// Only adopt a fully-searched iteration: once the deadline passes,
+		// negamax bails out to static evals mid-tree, so a truncated
+		// iteration's scores mix depths and can crown a refuted move. Keep
+		// the previous complete iteration's choice instead — unless we have
+		// nothing at all yet (the cheap d=1 pass).
+		timedOut := time.Now().After(deadline)
+		if curFound && (!timedOut || !found) {
 			bestMove, found = curMove, true
 			// Reorder root moves so the next (deeper) iteration searches
 			// this iteration's best move first — better alpha-beta pruning.
@@ -209,7 +215,7 @@ func BestMove(b *Board, side Side, depth int) (Move, bool) {
 				}
 			}
 		}
-		if time.Now().After(deadline) {
+		if timedOut {
 			break
 		}
 	}

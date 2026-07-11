@@ -12,8 +12,8 @@ import (
 // rotations/reflections on demand.
 type Offset [2]int
 
-func rotate90(p Offset) Offset  { return Offset{-p[1], p[0]} }
-func reflectX(p Offset) Offset  { return Offset{-p[0], p[1]} }
+func rotate90(p Offset) Offset { return Offset{-p[1], p[0]} }
+func reflectX(p Offset) Offset { return Offset{-p[0], p[1]} }
 
 // normalize shifts cells so the minimum x and y are both 0, then returns them
 // sorted in row-major order (by y, then x) for a stable, canonical form.

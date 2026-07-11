@@ -206,7 +206,7 @@ var patternTable = map[TileType][2][]PatternEntry{
 	// (ignores blockers, can capture by landing); face II hops exactly 2
 	// squares orthogonally, also ignoring whatever sits in between.
 	Knight: {
-		FaceA: knightOffsets, // "Riddare·I" — knight leap
+		FaceA: knightOffsets,                      // "Riddare·I" — knight leap
 		FaceB: distance2Offsets(orthoDirs4, Jump), // "Riddare·II" — orthogonal hop
 	},
 
@@ -223,8 +223,8 @@ var patternTable = map[TileType][2][]PatternEntry{
 	// diagonally; face II reaches 2 squares diagonally but MoveOnly (no
 	// capture) — flipping between "can hit" and "can reposition further."
 	DiagGuard: {
-		FaceA: adjacentOffsets(diagDirs4, MoveOrStrike),  // "Diagonalvakt·I"
-		FaceB: distance2Offsets(diagDirs4, MoveOnly), // "Diagonalvakt·II" — no capture
+		FaceA: adjacentOffsets(diagDirs4, MoveOrStrike), // "Diagonalvakt·I"
+		FaceB: distance2Offsets(diagDirs4, MoveOnly),    // "Diagonalvakt·II" — no capture
 	},
 
 	// Katapult (Catapult): strike-only, on both faces — it NEVER relocates.

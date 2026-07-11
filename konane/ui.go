@@ -579,9 +579,9 @@ func drawSplashMotif(box image.Rectangle) {
 		ink.DrawLine(image.Pt(grid.Min.X, y), image.Pt(grid.Max.X, y), ink.Black)
 	}
 
-	gap := image.Pt(1, 1)      // the empty opening gap
-	over := image.Pt(1, 2)     // the stone that gets jumped
-	jumper := image.Pt(1, 3)   // the stone that jumps, two cells below the gap
+	gap := image.Pt(1, 1)    // the empty opening gap
+	over := image.Pt(1, 2)   // the stone that gets jumped
+	jumper := image.Pt(1, 3) // the stone that jumps, two cells below the gap
 	cellCenter := func(p image.Point) image.Point {
 		return image.Pt(origin.X+p.X*cell+cell/2, origin.Y+p.Y*cell+cell/2)
 	}

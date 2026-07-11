@@ -12,29 +12,85 @@ package game
 // currently legal: the colors must be pairwise distinct, and each color's
 // bank pile must have at least 1 token.
 func (gs *GameState) CanTake3(colors [3]Color) bool {
+	return gs.CanTakeColors(colors[:])
+}
+
+// Take3 applies the take-3 action. Returns false (no effect) if illegal.
+func (gs *GameState) Take3(colors [3]Color) bool {
+	return gs.TakeColors(colors[:])
+}
+
+// takeableColors returns how many DIFFERENT colors a take action must cover:
+// 3 normally, fewer when the bank has run dry — the official-rules fallback
+// that a player takes as many different tokens as the bank can supply.
+func (gs *GameState) takeableColors() int {
+	n := 0
+	for c := Color(0); c < NumColors; c++ {
+		if gs.Bank[c] > 0 {
+			n++
+		}
+	}
+	if n > 3 {
+		n = 3
+	}
+	return n
+}
+
+// CanTakeColors reports whether taking one token each of the given distinct
+// colors is currently legal. Normally that is exactly 3 different colors;
+// when fewer than 3 bank piles are non-empty the official fallback applies:
+// the player takes one of EVERY remaining color (2, or 1) instead — taking
+// fewer than the bank can supply is never legal.
+func (gs *GameState) CanTakeColors(colors []Color) bool {
 	if gs.Phase != PhasePlaying {
 		return false
 	}
-	if colors[0] == colors[1] || colors[0] == colors[2] || colors[1] == colors[2] {
+	if len(colors) < 1 || len(colors) > 3 || len(colors) != gs.takeableColors() {
 		return false
 	}
-	for _, c := range colors {
+	for i, c := range colors {
 		if c < 0 || c >= NumColors || gs.Bank[c] < 1 {
 			return false
+		}
+		for j := 0; j < i; j++ {
+			if colors[j] == c {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-// Take3 applies the take-3 action. Returns false (no effect) if illegal.
-func (gs *GameState) Take3(colors [3]Color) bool {
-	if !gs.CanTake3(colors) {
+// TakeColors applies a take of one token per given color (see CanTakeColors).
+// Returns false (no effect) if illegal.
+func (gs *GameState) TakeColors(colors []Color) bool {
+	if !gs.CanTakeColors(colors) {
 		return false
 	}
 	p := &gs.Players[gs.Turn]
 	for _, c := range colors {
 		gs.Bank[c]--
 		p.Tokens[c]++
+	}
+	gs.afterAction()
+	return true
+}
+
+// --- Pass (last resort) -------------------------------------------------------
+
+// CanPass reports whether passing the turn is legal: only when the player has
+// NO other action at all (empty bank, nothing reservable, nothing affordable)
+// — the official-rules escape hatch that keeps a pathological position from
+// deadlocking the game.
+func (gs *GameState) CanPass() bool {
+	return gs.Phase == PhasePlaying && len(gs.legalActionsNoPass()) == 0
+}
+
+// Pass ends the turn without acting. Returns false (no effect) if any real
+// action is available.
+func (gs *GameState) Pass() bool {
+	if !gs.CanPass() {
+		return false
 	}
 	gs.afterAction()
 	return true

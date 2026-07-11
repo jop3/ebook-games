@@ -44,6 +44,7 @@ type App struct {
 	kfbBlack   int  // player's in-progress black-feedback count for current guess
 	kfbWhite   int  // player's in-progress white-feedback count
 	aiPending  bool // true after a confirm: compute the next guess on next Draw
+	flushAfter bool // force a FullUpdate on the frame after the minimax ran
 
 	// cached hit rectangles for the Knuth screen.
 	knuthBtn    button // "Enheten gissar" on the menu
@@ -244,9 +245,10 @@ func (a *App) touchKnuth(p image.Point) bool {
 	}
 	if a.kConfirm.hit(p) {
 		// Record the feedback; the heavy minimax runs on the next Draw so the
-		// UI can first paint a "Räknar…" hint (aiPending pattern).
+		// UI can first paint a "Räknar…" hint (aiPending pattern). No flush
+		// here — the canvas is still the pre-tap frame; Draw flushes the
+		// "Räknar…" frame itself before computing.
 		a.aiPending = true
-		ink.FullUpdate()
 		ink.Repaint()
 		return true
 	}
@@ -321,20 +323,24 @@ func (a *App) Draw() {
 		a.drawRules()
 	}
 
-	// aiPending: the screen was drawn once showing "Räknar…"; now do the heavy
-	// minimax and queue another Draw with the fresh guess. This keeps the UI
-	// from freezing between the tap and the result.
+	// aiPending: this frame just painted "Räknar…" — flush it to the panel
+	// FIRST so the hint is actually visible while the heavy minimax runs,
+	// then compute and queue another Draw with the fresh guess (which must
+	// itself flush, hence flushAfter — the periodic %8 refresh alone could
+	// leave the result invisible for several taps).
 	if a.aiPending && a.scr == screenKnuth {
 		a.aiPending = false
+		ink.FullUpdate()
 		a.knuth.Feedback(Feedback{Black: a.kfbBlack, White: a.kfbWhite})
 		a.kfbBlack = 0
 		a.kfbWhite = 0
-		ink.FullUpdate()
+		a.flushAfter = true
 		ink.Repaint()
 		return
 	}
 	// Periodic full refresh to clear e-ink ghosting.
-	if a.drawsN%8 == 0 {
+	if a.flushAfter || a.drawsN%8 == 0 {
+		a.flushAfter = false
 		ink.FullUpdate()
 	}
 }

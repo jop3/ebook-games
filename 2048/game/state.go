@@ -70,10 +70,14 @@ func statusFor(b Board, target int, wonSeen bool) Status {
 }
 
 // Continue dismisses the win banner and keeps playing past the target tile.
+// The status is re-derived rather than blindly set to Playing: the winning
+// move may ALSO have filled the board with no merges left (Won has priority
+// over Over in statusFor), and continuing such a game would silently freeze —
+// no banner, no legal move, forever.
 func (s *GameState) Continue() {
 	s.WonSeen = true
 	if s.Status == StatusWon {
-		s.Status = StatusPlaying
+		s.Status = statusFor(s.Board, s.Target, s.WonSeen)
 	}
 }
 

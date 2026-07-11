@@ -20,7 +20,7 @@ func Alphabet() []rune {
 
 // Guess is a submitted guess together with its per-position feedback.
 type Guess struct {
-	Word    string
+	Word     string
 	Statuses []Status
 }
 
@@ -89,10 +89,10 @@ func (g *GameState) Backspace() bool {
 type SubmitResult int
 
 const (
-	SubmitOK          SubmitResult = iota // accepted and scored
-	SubmitIncomplete                      // entry not yet WordLen letters
-	SubmitNotWord                         // entry is not in the dictionary
-	SubmitGameOver                        // game already finished
+	SubmitOK         SubmitResult = iota // accepted and scored
+	SubmitIncomplete                     // entry not yet WordLen letters
+	SubmitNotWord                        // entry is not in the dictionary
+	SubmitGameOver                       // game already finished
 )
 
 // Submit validates and scores the current entry. On success the entry is
