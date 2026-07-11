@@ -103,6 +103,7 @@ heuristics to alpha-beta and perfect play).
 
 | Folder | What it does |
 |---|---|
+| [boksynk](boksynk/) | **Boksynk** — syncs the Google Drive folder where you keep your books straight onto the reader over Wi-Fi: open the app, tap *Synka*, read. |
 | [lasordning](lasordning/) | **Läsordning** — reads the device's library DB and shows your books grouped into series, in reading order. |
 | [spelbutiken](spelbutiken/) | **Spelbutiken** — installs and updates all of the games *on the reader itself* from the latest GitHub release, over Wi-Fi. |
 | [screentest](screentest/) | A screen-boundary diagnostic used while building these apps. |
